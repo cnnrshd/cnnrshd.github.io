@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>python on Connor Shade</title>
+    <link>https://connorshade.com/tags/python/</link>
+    <description>Recent content in python on Connor Shade</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 27 Jul 2023 21:43:58 -0400</lastBuildDate><atom:link href="https://connorshade.com/tags/python/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Making a Vulnerable Webapp</title>
+      <link>https://connorshade.com/posts/vulnerable-webapp/</link>
+      <pubDate>Thu, 27 Jul 2023 21:43:58 -0400</pubDate>
+      
+      <guid>https://connorshade.com/posts/vulnerable-webapp/</guid>
+      <description>I want to make a vulnerable webapp using Python FastAPI that I can scan with a custom projects/nmap probe and exploit with projects/metasploit module. The easiest would probably be command injection of a DNS tool
+Below is the process:
+Checkout a new git repo - I did this on github and cloned it locally. Start the Python dependencies Writing the App Python dependency management I use a virtual environment for everything I do with Python.</description>
+    </item>
+    
+  </channel>
+</rss>

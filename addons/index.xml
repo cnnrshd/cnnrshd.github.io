@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Addons on Connor Shade</title>
+    <link>https://connorshade.com/addons/</link>
+    <description>Recent content in Addons on Connor Shade</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 27 Jul 2023 21:27:02 -0400</lastBuildDate><atom:link href="https://connorshade.com/addons/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>About Author</title>
+      <link>https://connorshade.com/author/</link>
+      <pubDate>Thu, 27 Jul 2023 21:27:02 -0400</pubDate>
+      
+      <guid>https://connorshade.com/author/</guid>
+      <description>I like to work at the intersection of Security and Automation. I enjoy building content and training.</description>
+    </item>
+    
+    <item>
+      <title>All Sections</title>
+      <link>https://connorshade.com/sections/</link>
+      <pubDate>Mon, 06 Apr 2020 02:07:30 +0600</pubDate>
+      
+      <guid>https://connorshade.com/sections/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>
