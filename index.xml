@@ -8,6 +8,25 @@
     <language>en-us</language>
     <lastBuildDate>Fri, 28 Jul 2023 16:20:46 -0400</lastBuildDate><atom:link href="https://connorshade.com/index.xml" rel="self" type="application/rss+xml" />
     <item>
+      <title>Projects</title>
+      <link>https://connorshade.com/projects/</link>
+      <pubDate>Sat, 29 Jul 2023 10:17:27 -0400</pubDate>
+      
+      <guid>https://connorshade.com/projects/</guid>
+      <description>Below is a list of all projects that are hosted on this blog. Projects are a subset of sections.</description>
+    </item>
+    
+    <item>
+      <title>Making a Vulnerable Webapp</title>
+      <link>https://connorshade.com/service-to-shell/vulnerable-webapp/</link>
+      <pubDate>Thu, 27 Jul 2023 21:43:58 -0400</pubDate>
+      
+      <guid>https://connorshade.com/service-to-shell/vulnerable-webapp/</guid>
+      <description>Welcome to Part One in a three part series that I&amp;rsquo;ve called &amp;ldquo;service-to-shell&amp;rdquo;. I want to make a vulnerable webapp that I can scan with a custom nmap probe and exploit with a custom Metasploit module.
+This post covers making the vulnerable webapp - not as exciting as a custom Metasploit module or as useful as an additional nmap banner scanner, but an essential part of the process. For making a vulnerable webapp, the first step is to pick the language (I went with Python), then the vulnerability (Command injection - it&amp;rsquo;s simple to write and understand), and finally the theme.</description>
+    </item>
+    
+    <item>
       <title>About Author</title>
       <link>https://connorshade.com/author/</link>
       <pubDate>Thu, 27 Jul 2023 21:27:02 -0400</pubDate>
@@ -22,7 +41,7 @@
       <pubDate>Thu, 27 Jul 2023 21:27:02 -0400</pubDate>
       
       <guid>https://connorshade.com/sections/</guid>
-      <description>Below is a list of all sections in this blog along with a short description.</description>
+      <description>Below is a list of all sections in this blog along with a short description. Sections includes projects.</description>
     </item>
     
     <item>

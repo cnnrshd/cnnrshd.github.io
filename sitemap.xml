@@ -2,19 +2,46 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
+    <loc>https://connorshade.com/addons/</loc>
+    <lastmod>2023-07-29T10:17:27-04:00</lastmod>
+  </url><url>
+    <loc>https://connorshade.com/projects/</loc>
+    <lastmod>2023-07-29T10:17:27-04:00</lastmod>
+  </url><url>
+    <loc>https://connorshade.com/tags/cpe/</loc>
+    <lastmod>2023-07-28T16:46:09-04:00</lastmod>
+  </url><url>
+    <loc>https://connorshade.com/tags/metasploit/</loc>
+    <lastmod>2023-07-28T16:46:09-04:00</lastmod>
+  </url><url>
+    <loc>https://connorshade.com/tags/nmap/</loc>
+    <lastmod>2023-07-28T16:46:09-04:00</lastmod>
+  </url><url>
     <loc>https://connorshade.com/post/</loc>
+    <lastmod>2023-07-28T16:46:09-04:00</lastmod>
+  </url><url>
+    <loc>https://connorshade.com/tags/python/</loc>
     <lastmod>2023-07-28T16:46:09-04:00</lastmod>
   </url><url>
     <loc>https://connorshade.com/service-to-shell/</loc>
     <lastmod>2023-07-28T16:46:09-04:00</lastmod>
   </url><url>
+    <loc>https://connorshade.com/tags/</loc>
+    <lastmod>2023-07-28T16:46:09-04:00</lastmod>
+  </url><url>
     <loc>https://connorshade.com/</loc>
     <lastmod>2023-07-28T16:20:46-04:00</lastmod>
   </url><url>
-    <loc>https://connorshade.com/author/</loc>
-    <lastmod>2023-07-27T21:27:02-04:00</lastmod>
+    <loc>https://connorshade.com/tags/command-injection/</loc>
+    <lastmod>2023-07-27T21:43:58-04:00</lastmod>
   </url><url>
-    <loc>https://connorshade.com/addons/</loc>
+    <loc>https://connorshade.com/tags/exploit/</loc>
+    <lastmod>2023-07-27T21:43:58-04:00</lastmod>
+  </url><url>
+    <loc>https://connorshade.com/service-to-shell/vulnerable-webapp/</loc>
+    <lastmod>2023-07-27T21:43:58-04:00</lastmod>
+  </url><url>
+    <loc>https://connorshade.com/author/</loc>
     <lastmod>2023-07-27T21:27:02-04:00</lastmod>
   </url><url>
     <loc>https://connorshade.com/sections/</loc>
@@ -24,7 +51,5 @@
     <lastmod>2023-07-27T21:27:02-04:00</lastmod>
   </url><url>
     <loc>https://connorshade.com/categories/</loc>
-  </url><url>
-    <loc>https://connorshade.com/tags/</loc>
   </url>
 </urlset>

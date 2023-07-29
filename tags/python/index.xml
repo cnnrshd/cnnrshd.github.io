@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Service to Shell on Connor Shade</title>
-    <link>https://connorshade.com/service-to-shell/</link>
-    <description>Recent content in Service to Shell on Connor Shade</description>
+    <title>python on Connor Shade</title>
+    <link>https://connorshade.com/tags/python/</link>
+    <description>Recent content in python on Connor Shade</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 28 Jul 2023 16:46:09 -0400</lastBuildDate><atom:link href="https://connorshade.com/service-to-shell/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 28 Jul 2023 16:46:09 -0400</lastBuildDate><atom:link href="https://connorshade.com/tags/python/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Service to Shell</title>
+      <link>https://connorshade.com/service-to-shell/</link>
+      <pubDate>Fri, 28 Jul 2023 16:46:09 -0400</pubDate>
+      
+      <guid>https://connorshade.com/service-to-shell/</guid>
+      <description>Check out the code at github.com/cnnrshd/service-to-shell.</description>
+    </item>
+    
     <item>
       <title>Making a Vulnerable Webapp</title>
       <link>https://connorshade.com/service-to-shell/vulnerable-webapp/</link>

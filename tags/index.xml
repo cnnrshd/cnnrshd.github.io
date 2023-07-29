@@ -5,6 +5,61 @@
     <link>https://connorshade.com/tags/</link>
     <description>Recent content in Tags on Connor Shade</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-us</language><atom:link href="https://connorshade.com/tags/index.xml" rel="self" type="application/rss+xml" />
+    <language>en-us</language>
+    <lastBuildDate>Fri, 28 Jul 2023 16:46:09 -0400</lastBuildDate><atom:link href="https://connorshade.com/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>cpe</title>
+      <link>https://connorshade.com/tags/cpe/</link>
+      <pubDate>Fri, 28 Jul 2023 16:46:09 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/cpe/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>metasploit</title>
+      <link>https://connorshade.com/tags/metasploit/</link>
+      <pubDate>Fri, 28 Jul 2023 16:46:09 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/metasploit/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>nmap</title>
+      <link>https://connorshade.com/tags/nmap/</link>
+      <pubDate>Fri, 28 Jul 2023 16:46:09 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/nmap/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>python</title>
+      <link>https://connorshade.com/tags/python/</link>
+      <pubDate>Fri, 28 Jul 2023 16:46:09 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/python/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>command injection</title>
+      <link>https://connorshade.com/tags/command-injection/</link>
+      <pubDate>Thu, 27 Jul 2023 21:43:58 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/command-injection/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>exploit</title>
+      <link>https://connorshade.com/tags/exploit/</link>
+      <pubDate>Thu, 27 Jul 2023 21:43:58 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/exploit/</guid>
+      <description></description>
+    </item>
+    
   </channel>
 </rss>

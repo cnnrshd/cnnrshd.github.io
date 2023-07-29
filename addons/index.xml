@@ -6,7 +6,16 @@
     <description>Recent content in Addons on Connor Shade</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 27 Jul 2023 21:27:02 -0400</lastBuildDate><atom:link href="https://connorshade.com/addons/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 29 Jul 2023 10:17:27 -0400</lastBuildDate><atom:link href="https://connorshade.com/addons/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Projects</title>
+      <link>https://connorshade.com/projects/</link>
+      <pubDate>Sat, 29 Jul 2023 10:17:27 -0400</pubDate>
+      
+      <guid>https://connorshade.com/projects/</guid>
+      <description>Below is a list of all projects that are hosted on this blog. Projects are a subset of sections.</description>
+    </item>
+    
     <item>
       <title>About Author</title>
       <link>https://connorshade.com/author/</link>
@@ -22,7 +31,7 @@
       <pubDate>Thu, 27 Jul 2023 21:27:02 -0400</pubDate>
       
       <guid>https://connorshade.com/sections/</guid>
-      <description>Below is a list of all sections in this blog along with a short description.</description>
+      <description>Below is a list of all sections in this blog along with a short description. Sections includes projects.</description>
     </item>
     
   </channel>

