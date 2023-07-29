@@ -1,18 +1,36 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Ramium Theme on Connor Shade</title>
+    <title>Connor Shade</title>
     <link>https://connorshade.com/</link>
-    <description>Recent content in Ramium Theme on Connor Shade</description>
+    <description>Recent content on Connor Shade</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 25 Mar 2020 04:52:30 +0600</lastBuildDate><atom:link href="https://connorshade.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 28 Jul 2023 16:20:46 -0400</lastBuildDate><atom:link href="https://connorshade.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Custom Metasploit Module</title>
+      <link>https://connorshade.com/service-to-shell/custom-metasploit/</link>
+      <pubDate>Fri, 28 Jul 2023 22:17:57 -0400</pubDate>
+      
+      <guid>https://connorshade.com/service-to-shell/custom-metasploit/</guid>
+      <description>some thign</description>
+    </item>
+    
+    <item>
+      <title>Writing Nmap Scan</title>
+      <link>https://connorshade.com/service-to-shell/writing-nmap-scan/</link>
+      <pubDate>Fri, 28 Jul 2023 16:26:20 -0400</pubDate>
+      
+      <guid>https://connorshade.com/service-to-shell/writing-nmap-scan/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>Making a Vulnerable Webapp</title>
-      <link>https://connorshade.com/posts/vulnerable-webapp/</link>
+      <link>https://connorshade.com/service-to-shell/vulnerable-webapp/</link>
       <pubDate>Thu, 27 Jul 2023 21:43:58 -0400</pubDate>
       
-      <guid>https://connorshade.com/posts/vulnerable-webapp/</guid>
+      <guid>https://connorshade.com/service-to-shell/vulnerable-webapp/</guid>
       <description>I want to make a vulnerable webapp using Python FastAPI that I can scan with a custom projects/nmap probe and exploit with projects/metasploit module. The easiest would probably be command injection of a DNS tool
 Below is the process:
 Checkout a new git repo - I did this on github and cloned it locally. Start the Python dependencies Writing the App Python dependency management I use a virtual environment for everything I do with Python.</description>
@@ -28,23 +46,23 @@ Checkout a new git repo - I did this on github and cloned it locally. Start the 
     </item>
     
     <item>
-      <title>Intro Post</title>
-      <link>https://connorshade.com/posts/intro-post/</link>
+      <title>All Sections</title>
+      <link>https://connorshade.com/sections/</link>
       <pubDate>Thu, 27 Jul 2023 21:27:02 -0400</pubDate>
       
-      <guid>https://connorshade.com/posts/intro-post/</guid>
-      <description>Welcome. This is my blog for the time being.
-Content Expect content to be: projects I work on, stuff I do, focused on tech.
-Hosting The address (connorshade.com) should never change, but the theme and hosting provider may. Right now I&amp;rsquo;m &amp;ldquo;hosting&amp;rdquo; on Github pages - posts are built with Hugo and I&amp;rsquo;m using the ramium theme. I expect the theme to change - probably to gruvbox when I want to deal with the npm stuff it requires.</description>
+      <guid>https://connorshade.com/sections/</guid>
+      <description>Below is a list of all sections in this blog along with a short description.</description>
     </item>
     
     <item>
-      <title>All Sections</title>
-      <link>https://connorshade.com/sections/</link>
-      <pubDate>Mon, 06 Apr 2020 02:07:30 +0600</pubDate>
+      <title>Intro Post</title>
+      <link>https://connorshade.com/post/intro/intro-post/</link>
+      <pubDate>Thu, 27 Jul 2023 21:27:02 -0400</pubDate>
       
-      <guid>https://connorshade.com/sections/</guid>
-      <description></description>
+      <guid>https://connorshade.com/post/intro/intro-post/</guid>
+      <description>Welcome. This is my blog for the time being.
+Content Expect content to be: projects I work on, stuff I do, focused on tech.
+Hosting The address (connorshade.com) should never change, but the theme and hosting provider may. Right now I&amp;rsquo;m &amp;ldquo;hosting&amp;rdquo; on Github pages - posts are built with Hugo and I&amp;rsquo;m using the bear cub theme because it seems simple enough. I tried to use Gruvbox but the idea of installing nvm to install node to install npm to install &amp;gt;100 dependencies to compile a webpage is disgusting, despite how nice the page looks.</description>
     </item>
     
   </channel>

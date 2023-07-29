@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on Connor Shade</title>
+    <link>https://connorshade.com/post/</link>
+    <description>Recent content in Posts on Connor Shade</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 28 Jul 2023 16:46:09 -0400</lastBuildDate><atom:link href="https://connorshade.com/post/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Intro Post</title>
+      <link>https://connorshade.com/post/intro/intro-post/</link>
+      <pubDate>Thu, 27 Jul 2023 21:27:02 -0400</pubDate>
+      
+      <guid>https://connorshade.com/post/intro/intro-post/</guid>
+      <description>Welcome. This is my blog for the time being.
+Content Expect content to be: projects I work on, stuff I do, focused on tech.
+Hosting The address (connorshade.com) should never change, but the theme and hosting provider may. Right now I&amp;rsquo;m &amp;ldquo;hosting&amp;rdquo; on Github pages - posts are built with Hugo and I&amp;rsquo;m using the bear cub theme because it seems simple enough. I tried to use Gruvbox but the idea of installing nvm to install node to install npm to install &amp;gt;100 dependencies to compile a webpage is disgusting, despite how nice the page looks.</description>
+    </item>
+    
+  </channel>
+</rss>

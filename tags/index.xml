@@ -6,7 +6,25 @@
     <description>Recent content in Tags on Connor Shade</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 27 Jul 2023 21:43:58 -0400</lastBuildDate><atom:link href="https://connorshade.com/tags/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 28 Jul 2023 16:26:20 -0400</lastBuildDate><atom:link href="https://connorshade.com/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>nmap</title>
+      <link>https://connorshade.com/tags/nmap/</link>
+      <pubDate>Fri, 28 Jul 2023 16:26:20 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/nmap/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>scan</title>
+      <link>https://connorshade.com/tags/scan/</link>
+      <pubDate>Fri, 28 Jul 2023 16:26:20 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/scan/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>exploit</title>
       <link>https://connorshade.com/tags/exploit/</link>

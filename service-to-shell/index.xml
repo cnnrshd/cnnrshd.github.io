@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Service to Shell on Connor Shade</title>
+    <link>https://connorshade.com/service-to-shell/</link>
+    <description>Recent content in Service to Shell on Connor Shade</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 28 Jul 2023 16:46:09 -0400</lastBuildDate><atom:link href="https://connorshade.com/service-to-shell/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Custom Metasploit Module</title>
+      <link>https://connorshade.com/service-to-shell/custom-metasploit/</link>
+      <pubDate>Fri, 28 Jul 2023 22:17:57 -0400</pubDate>
+      
+      <guid>https://connorshade.com/service-to-shell/custom-metasploit/</guid>
+      <description>some thign</description>
+    </item>
+    
+    <item>
+      <title>Writing Nmap Scan</title>
+      <link>https://connorshade.com/service-to-shell/writing-nmap-scan/</link>
+      <pubDate>Fri, 28 Jul 2023 16:26:20 -0400</pubDate>
+      
+      <guid>https://connorshade.com/service-to-shell/writing-nmap-scan/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Making a Vulnerable Webapp</title>
+      <link>https://connorshade.com/service-to-shell/vulnerable-webapp/</link>
+      <pubDate>Thu, 27 Jul 2023 21:43:58 -0400</pubDate>
+      
+      <guid>https://connorshade.com/service-to-shell/vulnerable-webapp/</guid>
+      <description>I want to make a vulnerable webapp using Python FastAPI that I can scan with a custom projects/nmap probe and exploit with projects/metasploit module. The easiest would probably be command injection of a DNS tool
+Below is the process:
+Checkout a new git repo - I did this on github and cloned it locally. Start the Python dependencies Writing the App Python dependency management I use a virtual environment for everything I do with Python.</description>
+    </item>
+    
+  </channel>
+</rss>
