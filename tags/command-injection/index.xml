@@ -6,6 +6,7 @@
     <description>Recent content in command injection on Connor Shade</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
+    <copyright>Connor Shade</copyright>
     <lastBuildDate>Thu, 27 Jul 2023 21:43:58 -0400</lastBuildDate><atom:link href="https://connorshade.com/tags/command-injection/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Making a Vulnerable Webapp</title>
@@ -13,8 +14,8 @@
       <pubDate>Thu, 27 Jul 2023 21:43:58 -0400</pubDate>
       
       <guid>https://connorshade.com/service-to-shell/vulnerable-webapp/</guid>
-      <description>Welcome to Part One in a three part series that I&amp;rsquo;ve called &amp;ldquo;service-to-shell&amp;rdquo;. I want to make a vulnerable webapp that I can scan with a custom nmap probe and exploit with a custom Metasploit module.
-This post covers making the vulnerable webapp - not as exciting as a custom Metasploit module or as useful as an additional nmap banner scanner, but an essential part of the process. For making a vulnerable webapp, the first step is to pick the language (I went with Python), then the vulnerability (Command injection - it&amp;rsquo;s simple to write and understand), and finally the theme.</description>
+      <description>Welcome to Part One in my &amp;ldquo;service-to-shell&amp;rdquo; series. I want to make a vulnerable webapp that I can scan with a custom nmap probe and exploit with a custom Metasploit module.
+This post covers making the vulnerable webapp - not as exciting as a custom Metasploit module or as useful as an additional nmap banner scanner, but an essential part of the project. For making a vulnerable webapp, the first step is to pick the language (I went with Python), then the vulnerability (Command injection - it&amp;rsquo;s simple to write and understand), and finally the theme.</description>
     </item>
     
   </channel>

@@ -6,6 +6,7 @@
     <description>Recent content in Addons on Connor Shade</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
+    <copyright>Connor Shade</copyright>
     <lastBuildDate>Sat, 29 Jul 2023 10:17:27 -0400</lastBuildDate><atom:link href="https://connorshade.com/addons/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Projects</title>
@@ -13,7 +14,7 @@
       <pubDate>Sat, 29 Jul 2023 10:17:27 -0400</pubDate>
       
       <guid>https://connorshade.com/projects/</guid>
-      <description>Below is a list of all projects that are hosted on this blog. Projects are a subset of sections.</description>
+      <description>Below is a list of all projects that are hosted on this blog.</description>
     </item>
     
     <item>
@@ -22,16 +23,8 @@
       <pubDate>Thu, 27 Jul 2023 21:27:02 -0400</pubDate>
       
       <guid>https://connorshade.com/author/</guid>
-      <description>I like to work at the intersection of Security and Automation. I enjoy building content and training. The blog is a work in progress - trying to get the pipeline working well. Expect some oddities (missing images, notes in posts)</description>
-    </item>
-    
-    <item>
-      <title>All Sections</title>
-      <link>https://connorshade.com/sections/</link>
-      <pubDate>Thu, 27 Jul 2023 21:27:02 -0400</pubDate>
-      
-      <guid>https://connorshade.com/sections/</guid>
-      <description>Below is a list of all sections in this blog along with a short description. Sections includes projects.</description>
+      <description>I like to work at the intersection of Security and Automation. I enjoy building content and training. The blog is a work in progress - trying to get the pipeline working well. Expect some oddities (missing images, notes in posts).
+Seeking Opportunities I&amp;rsquo;m currently looking for new opportunities in Cyber Security (or adjacent fields). Check out my LinkedIn for more details (CV Page coming soon).</description>
     </item>
     
   </channel>
