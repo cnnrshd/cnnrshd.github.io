@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Writing Nmap Scan | Connor Shade</title>
+<meta name="title" content="Writing Nmap Scan" />
+<meta name="description" content="Writing an nmap match and banner probe to scan dnssearcher" />
+<meta name="keywords" content="nmap,scan,cpe," />
+
+
+
+
+
+
+  
+  <meta property="og:title" content="Writing Nmap Scan" />
+<meta property="og:description" content="Writing an nmap match and banner probe to scan dnssearcher" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://connorshade.com/service-to-shell/writing-nmap-scan/" /><meta property="article:section" content="service-to-shell" />
+<meta property="article:published_time" content="2023-07-28T16:26:20-04:00" />
+<meta property="article:modified_time" content="2023-08-01T21:22:37-04:00" />
+
+
+  
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Writing Nmap Scan"/>
+<meta name="twitter:description" content="Writing an nmap match and banner probe to scan dnssearcher"/>
+
+
+  
+  <meta itemprop="name" content="Writing Nmap Scan">
+<meta itemprop="description" content="Writing an nmap match and banner probe to scan dnssearcher"><meta itemprop="datePublished" content="2023-07-28T16:26:20-04:00" />
+<meta itemprop="dateModified" content="2023-08-01T21:22:37-04:00" />
+<meta itemprop="wordCount" content="2729">
+<meta itemprop="keywords" content="nmap,scan,cpe," />
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  
+  <link href="/style.min.css" rel="stylesheet">
+
+  
+  <link href="/syntax.min.css" rel="stylesheet">
+
+  
+
+  
+</head>
+
+<body>
+  <header><a href="/" class="title"><h1>Connor Shade</h1></a>
+<nav>
+  <a href="/">Home</a>
+
+  <a href="/author/">Author</a>
+
+  <a href="/projects/">Projects</a>
+
+  <a href="/post/">All Posts</a>
+
+  <a href="/tags/">All Tags</a>
+
+
+<a href="/index.xml">RSS</a>
+
+</nav>
+</header>
+  <main>
+<h1>Writing Nmap Scan</h1>
+
+
+
+<span><i>Published 28.07.2023</i></span>
+
+    <span><i>, Last Edited 01.08.2023</i></span>
+
+<br>
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#reporting-a-banner">Reporting a banner</a>
+      <ul>
+        <li><a href="#reverse-proxy">Reverse Proxy</a></li>
+        <li><a href="#uvicorn">Uvicorn</a></li>
+      </ul>
+    </li>
+    <li><a href="#nmap-services-probe-file">nmap-services-probe file</a>
+      <ul>
+        <li><a href="#layout">Layout</a></li>
+        <li><a href="#how-does-it-work">How does it work</a></li>
+        <li><a href="#adding-a-detection-to-nmap-service-probes">Adding a detection to nmap-service-probes</a></li>
+        <li><a href="#a-minimal-nmap-service-probes-file">A Minimal nmap-service-probes file</a></li>
+      </ul>
+    </li>
+    <li><a href="#wrapping-up">Wrapping up</a>
+      <ul>
+        <li><a href="#stuff-to-test">Stuff to test</a></li>
+        <li><a href="#possible-tooling">Possible Tooling</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+<p>Welcome back to the second part of &ldquo;service-to-shell&rdquo;. In this post I&rsquo;ll outline the process of making a custom nmap <strong>match</strong> directive that can be used to detect services that may not have an existing nmap directive. This can be especially useful when dealing with custom applications. Here&rsquo;s an overview of what I&rsquo;ll cover:</p>
+<ul>
+<li>Modifying the dnssearcher service to report a banner</li>
+<li>The basic layout of an nmap service probe file</li>
+<li>Writing a custom nmap service probe to detect dnssearcher and extract the version</li>
+<li>Strip the probe to run banner scans 100x faster than default</li>
+</ul>
+<h2 id="reporting-a-banner">Reporting a banner</h2>
+<p>By default, uvicorn will use the Server header of &ldquo;uvicorn&rdquo; in the response. This says nothing about the application running behind uvicorn, and in some cases that&rsquo;s a good thing. <em>Security through obscurity isn&rsquo;t</em>, but such a bland banner does mean nobody can query Shodan and see the specific exploitable device you&rsquo;re running (at least, not from the Server header) - <code>curl -v http://127.0.0.1:8000</code>:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln"> 1</span><span class="cl">*   Trying 127.0.0.1:8000...
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">* Connected to 127.0.0.1 <span class="o">(</span>127.0.0.1<span class="o">)</span> port <span class="m">8000</span> <span class="o">(</span><span class="c1">#0)</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">&gt; GET / HTTP/1.1
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">&gt; Host: 127.0.0.1:8000
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">&gt; User-Agent: curl/7.81.0
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">&gt; Accept: */*
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">&gt; 
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">* Mark bundle as not supporting multiuse
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">&lt; HTTP/1.1 <span class="m">200</span> OK
+</span></span><span class="line"><span class="ln">10</span><span class="cl">&lt; date: Sun, <span class="m">30</span> Jul <span class="m">2023</span> 12:26:47 GMT
+</span></span><span class="line"><span class="ln">11</span><span class="cl">&lt; server: uvicorn
+</span></span><span class="line"><span class="ln">12</span><span class="cl">&lt; content-length: <span class="m">33</span>
+</span></span><span class="line"><span class="ln">13</span><span class="cl">&lt; content-type: application/json
+</span></span><span class="line"><span class="ln">14</span><span class="cl">&lt; 
+</span></span><span class="line"><span class="ln">15</span><span class="cl">* Connection <span class="c1">#0 to host 127.0.0.1 left intact</span>
+</span></span><span class="line"><span class="ln">16</span><span class="cl"><span class="o">{</span><span class="s2">&#34;message&#34;</span>:<span class="s2">&#34;Working DNSSearcher&#34;</span><span class="o">}</span>
+</span></span></code></pre></div><p>My goal is to get the <code>server: uvicorn</code> to say something like <code>server: dnssearcher v0.1.0</code>. My first though was to modify the FastAPI app, but I wasn&rsquo;t able to get that working - I don&rsquo;t think FastAPI is aware of the server header being returned.</p>
+<h3 id="reverse-proxy">Reverse Proxy</h3>
+<p>My next attempt was to put the whole application behind a proxy and rewrite the server banner using the proxy. The idea works, but the implementation required using a <a href="https://github.com/cnnrshd/service-to-shell/blob/master/proxy/Dockerfile">massive Dockerfile</a> that compiled nginx with the <strong>ngx_http_headers_more_filter_module</strong> module. This allowed me to set the header I wanted inside of the nginx config file:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-nginx" data-lang="nginx"><span class="line"><span class="ln"> 1</span><span class="cl"><span class="c1"># nginx.config
+</span></span></span><span class="line"><span class="ln"> 2</span><span class="cl"><span class="c1"></span><span class="k">load_module</span> <span class="s">modules/ngx_http_headers_more_filter_module.so</span><span class="p">;</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl"><span class="k">events</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl"><span class="k">http</span> <span class="p">{</span>
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">    <span class="kn">server_tokens</span> <span class="no">off</span><span class="p">;</span>
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">    <span class="kn">server</span> <span class="p">{</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">        <span class="kn">more_set_headers</span> <span class="s">&#34;Server:</span> <span class="s">DNS</span> <span class="s">Searcher</span> <span class="s">v0.1.0&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="ln">10</span><span class="cl">        <span class="kn">listen</span> <span class="mi">80</span><span class="p">;</span>
+</span></span><span class="line"><span class="ln">11</span><span class="cl">        <span class="kn">server_name</span> <span class="s">dnssearcher</span><span class="p">;</span>
+</span></span><span class="line"><span class="ln">12</span><span class="cl">
+</span></span><span class="line"><span class="ln">13</span><span class="cl">        <span class="kn">location</span> <span class="s">/</span> <span class="p">{</span>
+</span></span><span class="line"><span class="ln">14</span><span class="cl">            <span class="kn">proxy_pass</span> <span class="s">http://dnssearcher:8000</span><span class="p">;</span>
+</span></span><span class="line"><span class="ln">15</span><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="ln">16</span><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="ln">17</span><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>This works, but then I realized something: uvicorn is between FastAPI and the proxy, uvicorn is the application. Is there a way to modify uvicorn so that it returns a server header?</p>
+<h3 id="uvicorn">Uvicorn</h3>
+<p>After going through all that trouble I thought to do a Google search for modifying the server banner of a uvicorn service. It turns out, the solution was just adding <code>--header &quot;Server: dnssearcher v0.1.0&quot;</code> to the uvicorn start arguments:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">uvicorn main:app --reload --header <span class="s2">&#34;Server: dnssearcher v0.1.0&#34;</span>
+</span></span></code></pre></div><p>Now, the headers are correct when I <code>curl -v localhost:8000</code> (I don&rsquo;t even need the proxy):</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln"> 1</span><span class="cl">*   Trying 127.0.0.1:8000...
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">* Connected to localhost <span class="o">(</span>127.0.0.1<span class="o">)</span> port <span class="m">8000</span> <span class="o">(</span><span class="c1">#0)</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">&gt; GET / HTTP/1.1
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">&gt; Host: localhost:8000
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">&gt; User-Agent: curl/7.81.0
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">&gt; Accept: */*
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">&gt; 
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">* Mark bundle as not supporting multiuse
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">&lt; HTTP/1.1 <span class="m">200</span> OK
+</span></span><span class="line"><span class="ln">10</span><span class="cl">&lt; date: Sun, <span class="m">30</span> Jul <span class="m">2023</span> 12:45:47 GMT
+</span></span><span class="line"><span class="ln">11</span><span class="cl">&lt; server:  DNS Searcher v0.1.0 uvicorn
+</span></span><span class="line"><span class="ln">12</span><span class="cl">&lt; content-length: <span class="m">33</span>
+</span></span><span class="line"><span class="ln">13</span><span class="cl">&lt; content-type: application/json
+</span></span><span class="line"><span class="ln">14</span><span class="cl">&lt; 
+</span></span><span class="line"><span class="ln">15</span><span class="cl">* Connection <span class="c1">#0 to host localhost left intact</span>
+</span></span><span class="line"><span class="ln">16</span><span class="cl"><span class="o">{</span><span class="s2">&#34;message&#34;</span>:<span class="s2">&#34;Working DNSSearcher&#34;</span><span class="o">}</span>
+</span></span></code></pre></div><p>Now that the banner actually reports useful information, we can get started on parsing the banner.
+First I should go over the nmap probe file structure.</p>
+<h2 id="nmap-services-probe-file">nmap-services-probe file</h2>
+<p>The nmap-services-probe is a flat file with simple grammar. I <em>highly</em> recommend reading through the <a href="https://nmap.org/book/vscan-fileformat.html">full page of the nmap manual on the nmap-services-probe file</a> before making your own probes, but I&rsquo;ll do my best to distill the info here.</p>
+<h3 id="layout">Layout</h3>
+<p>Each file has:</p>
+<ul>
+<li>
+<p>One <strong>Exclude</strong> directive, which is a list of Ports to exclude from any probes. This directive goes above all probes</p>
+</li>
+<li>
+<p>A list of <strong>Probe</strong> directives. Each <strong>Probe</strong> has one or more <strong>match</strong> directives (<strong>softmatch</strong> are considered a subset of <strong>match</strong>), a <strong>probename</strong>, a <strong>protocol</strong>, a <strong>probestring</strong>, and optionally the <strong>no-payload</strong> keyword (only used for UDP port scanning). <strong>Match</strong> directives are as follows:</p>
+<ul>
+<li>A <strong>match</strong> directive starts with the <strong>service</strong>, which is a string that identifies what abstract service is being provided (http, ftp, printer, mysql). Next is a <strong>pattern</strong>, which is a regular expression that performs two functions: Service validation ; Data extraction.</li>
+</ul>
+</li>
+</ul>
+<p>Here is a sample, taken directly from the nmap documentation and slightly modified:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln"> 1</span><span class="cl">Exclude T:9100-9107
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl"># This is the NULL probe that just compares any banners given to us
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">##############################NEXT PROBE##############################
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">Probe TCP NULL q||
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl"># Wait for at least 5 seconds for data.  Otherwise an Nmap default is used.
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">totalwaitms 5000
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">match ftp m/^220[ -]Microsoft FTP Service\r\n/ p/Microsoft ftpd/
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">match ftp m/^220 ProFTPD (\d\S+) Server/ p/ProFTPD/ v/$1/
+</span></span><span class="line"><span class="ln">10</span><span class="cl">softmatch ftp m/^220 [-.\w ]+ftp.*\r\n$/i
+</span></span><span class="line"><span class="ln">11</span><span class="cl">
+</span></span><span class="line"><span class="ln">12</span><span class="cl">Probe TCP GenericLines q|\r\n\r\n|
+</span></span><span class="line"><span class="ln">13</span><span class="cl">ports 80
+</span></span><span class="line"><span class="ln">14</span><span class="cl">sslports 443
+</span></span><span class="line"><span class="ln">15</span><span class="cl">softmatch http m|^HTTP/\d\.\d|
+</span></span><span class="line"><span class="ln">16</span><span class="cl">match http m|^HTTP/1\.[01] \d\d\d.*?\r\nServer: nginx\r\n|s p/nginx/ cpe:/a:igor_sysoev:nginx/
+</span></span></code></pre></div><p>The above example has every section you should need to get started. On line 1 you can see the <strong>Exclude</strong> directive - TCP ports 9100-9107 are excluded, since those are common printer ports and may print anything sent to them. Line 5 holds the first <strong>Probe</strong> directive for the &ldquo;NULL&rdquo; probe. On lines 8 and 9, there are <strong>match</strong> directives for two separate FTP services, while line 10 has a generic <strong>softmatch</strong> if the response code is 220 and the banner has &ldquo;ftp&rdquo; in it.</p>
+<p>The next <strong>Probe</strong> on line 12 has <strong>port</strong> and <strong>sslports</strong> specified. There is also as <strong>softmatch</strong> on line 15 to match any generic HTTP service - the scan will return a service of &ldquo;http&rdquo; with no additional information if the <strong>softmatch</strong> hits but nothing else does. Hitting this <strong>softmatch</strong> will also limit future <strong>match</strong> objects to the same service, which in this case is &ldquo;http&rdquo;.</p>
+<h3 id="how-does-it-work">How does it work</h3>
+<p>What is the link between a Probe, a match, and a softmatch when writing a services-probe file? As an example, we&rsquo;ll take a look at the flow of Calibre which has a softmatch and match across different probes:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln">1</span><span class="cl"># version available with GetRequest
+</span></span><span class="line"><span class="ln">2</span><span class="cl">softmatch http m|^HTTP/1\.0 400 Bad Request\r\nContent-Length: 40\r\nContent-Type: text/plain; charset=UTF-8\r\nDate: .*\r\n\r\nMultiple leading empty lines not allow
+</span></span><span class="line"><span class="ln">3</span><span class="cl">ed| p/Calibre Content Server httpd/ cpe:/a:kovid_goyal:calibre/
+</span></span></code></pre></div><p>This <strong>softmatch</strong> is after the Probe &ldquo;GenericLines&rdquo;. <strong>softmatch</strong> on the service means that <em>only</em> <strong>match</strong> directives which have a service of <code>http</code> will be tried. It also identifies that, even if no other <strong>match</strong> directives hit, the CPE data for Application is &ldquo;kovid_goyal:calibre&rdquo;. The actual definition for GenericLines is below - notice the <code>q|\r\n\r\n|</code> - this string of characters is what was sent to Calibre, prompting the &ldquo;Multiple leading empty lines not allow&rdquo; error message:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln">1</span><span class="cl">Probe TCP GenericLines q|\r\n\r\n|
+</span></span><span class="line"><span class="ln">2</span><span class="cl">rarity 1
+</span></span><span class="line"><span class="ln">3</span><span class="cl">ports 21,23,35,43,79,98,110,113,119,199,214,264,449,505,510,540,587,616,628,666,731,771,782,1000,1010,1040-1043,1080,1212,1220,1248,1302,1400,1432,1467,1501,1505,1666
+</span></span><span class="line"><span class="ln">4</span><span class="cl">,1687-1688,2010,2024,2600,3000,3005,3128,3310,3333,3940,4155,5000,5400,5432,5555,5570,6112,6432,6667-6670,7144,7145,7200,7780,8000,8138,9000-9003,9801,11371,11965,137
+</span></span><span class="line"><span class="ln">5</span><span class="cl">20,15000-15002,18086,19150,26214,26470,31416,30444,34012,56667
+</span></span><span class="line"><span class="ln">6</span><span class="cl">sslports 989,990,992,995
+</span></span></code></pre></div><p><em>Much</em> further down the services-probe file is another calibre <strong>match</strong> definition,which expects a well-formatted HTTP response with a server header. The regex extracts the Calibre version from the header, putting it in the CPE:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln">1</span><span class="cl">match http m|^HTTP/1\.1 \d\d\d (?:[^\r\n]*\r\n(?!\r\n))*?Server: calibre ([\d.]+)\r\n|s p/Calibre Content Server httpd/ v/$1/ cpe:/a:kovid_goyal:calibre:$1/
+</span></span></code></pre></div><p>This is underneath the GetRequest <strong>probe</strong>, which sends a proper HTTP GET request:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln">1</span><span class="cl">Probe TCP GetRequest q|GET / HTTP/1.0\r\n\r\n|
+</span></span><span class="line"><span class="ln">2</span><span class="cl">rarity 1
+</span></span><span class="line"><span class="ln">3</span><span class="cl">ports 1,70,79,80-85,88,113,139,143,280,497,505,514,515,540,554,591,620,631,783,888,898,900,901,1026,1080,1042,1214,1220,1234,1314,1344,1503,1610,1611,1830,1900,2001,2002,2030,2064,2160,2306,2396,2525,2715,2869,3000,3002,3052,3128,3280,3372,3531,3689,3872,4000,4444,4567,4660,4711,5000,5427,5060,5222,5269,5280,5432,5800-5803,5900,5985,6103,6346,6544,6600,6699,6969,7002,7007,7070,7100,7402,7776,8000-8010,8080-8085,8088,8118,8181,8530,8880-8888,9000,9001,9030,9050,9080,9090,9999,10000,10001,10005,11371,13013,13666,13722,14534,15000,17988,18264,31337,40193,50000,55555
+</span></span><span class="line"><span class="ln">4</span><span class="cl">sslports 443,993,995,1311,1443,3443,4443,5061,5986,7443,8443,8531,9443,10443,14443,44443,60443
+</span></span></code></pre></div><p>And above everything is the NULL probe, which initiates the TCP connection.</p>
+<p>So from top to bottom, the process is:</p>
+<ol>
+<li>
+<p>A TCP connection from the NULL probe, which waits for 6000ms, in case the server sends banners to a new connection.</p>
+<ul>
+<li>Some services will send banners once a TCP connection is established, without waiting for a request. Calibre is not one of them, so the NULL probe returns nothing</li>
+</ul>
+</li>
+<li>
+<p>The banner is run against all softmatch and match lines within the NULL probe.</p>
+<ul>
+<li>In this case, there is no banner and therefore no matches.</li>
+</ul>
+</li>
+<li>
+<p>A TCP Probe for GenericLines that just sends <code>\r\n\r\n</code> is run</p>
+<ul>
+<li>
+<p>This returns an error message from Calibre. This is implementation-specific. Using <code>nc</code> to connect to dnssearcher and send <code>\r\n\r\n</code> doesn&rsquo;t get a response of any kind, but sending a basic <code>GET / HTTP/1.1\r\n</code> gets this response:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">GET / HTTP/1.1
+</span></span><span class="line"><span class="ln">2</span><span class="cl">
+</span></span><span class="line"><span class="ln">3</span><span class="cl">HTTP/1.1 <span class="m">200</span> OK
+</span></span><span class="line"><span class="ln">4</span><span class="cl">date: Tue, <span class="m">01</span> Aug <span class="m">2023</span> 22:53:18 GMT
+</span></span><span class="line"><span class="ln">5</span><span class="cl">server: uvicorn
+</span></span><span class="line"><span class="ln">6</span><span class="cl">content-length: <span class="m">33</span>
+</span></span><span class="line"><span class="ln">7</span><span class="cl">content-type: application/json
+</span></span><span class="line"><span class="ln">8</span><span class="cl">
+</span></span><span class="line"><span class="ln">9</span><span class="cl"><span class="o">{</span><span class="s2">&#34;message&#34;</span>:<span class="s2">&#34;Working DNSSearcher&#34;</span><span class="o">}</span>
+</span></span></code></pre></div></li>
+</ul>
+</li>
+<li>
+<p>Nmap searches top-down through all matches under this Probe for either a softmatch or a match</p>
+<ul>
+<li>A softmatch on the error banner that identifies that the product is &ldquo;Calibre Content Server httpd&rdquo; and the cpe string is &ldquo;cpe:/a:kovid_goyal:calibre/&rdquo; - this also limits further match attempts to <strong>http</strong> matches.</li>
+</ul>
+</li>
+<li>
+<p>A TCP Probe for GetRequest is sent, the format is a standard get request for <code>/</code></p>
+<ul>
+<li>I believe that the GetRequest probe is sent because it: A) Is next in the file ; B) Has at least one <strong>http</strong> match directive</li>
+</ul>
+</li>
+<li>
+<p>Nmap searches for matches under this probe that have a <strong>service</strong> of <code>http</code> and finds a matching one that extracts Calibre-specific data - this gets the version information.</p>
+</li>
+</ol>
+<h3 id="adding-a-detection-to-nmap-service-probes">Adding a detection to nmap-service-probes</h3>
+<p>Now that we&rsquo;ve covered a little bit about how nmap performs its lookups, we can answer the question: <em>What is the best way to extract dnssearcher version data using nmap</em>?</p>
+<p>The easiest method would be to add a match to an existing Probe directive. Based on the tests with <code>nc</code> and dnssearcher, we know that it won&rsquo;t respond to the GenericLines probe but it will respond to the GetRequest probe - we could simply add a match somewhere within the GetRequest probe.</p>
+<p>The idea of adding a custom version detection match is covered in the <a href="https://nmap.org/book/vscan-hack-it.html">nmap manual</a>. To start with, we can make a temp directory to hold a temp copy of the nmap-service-probes file. The default location for the nmap services probe file for me is <code>/usr/share/nmap/nmap-service-probes</code>. If you&rsquo;re unsure of the location, you can run the following command:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">sudo find / -type f -name <span class="s2">&#34;*nmap*probe*&#34;</span> 2&gt;/dev/null
+</span></span></code></pre></div><p>From within my <a href="https://github.com/cnnrshd/service-to-shell">service-to-shell</a> project directory I&rsquo;ll make a new folder for nmap stuff, copy the nmap-service-probes file there, and set an environment variable for nmap to use:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">mkdir ./custom-nmap
+</span></span><span class="line"><span class="ln">2</span><span class="cl">cp /usr/share/nmap/nmap-service-probes ./custom-nmap
+</span></span><span class="line"><span class="ln">3</span><span class="cl"><span class="c1"># keep in mind, the env variable is only good for the lifetime of this terminal session</span>
+</span></span><span class="line"><span class="ln">4</span><span class="cl"><span class="nb">export</span> <span class="s2">&#34;NMAPDIR=</span><span class="nv">$PWD</span><span class="s2">/custom-nmap&#34;</span>
+</span></span></code></pre></div><p>Now we&rsquo;re good to modify the temporary service probe file at <code>~/custom-nmap/nmap-service-probes</code>.
+We need to know what the full banner is in order to write a match, and we can actually use nmap for that.
+If we run an nmap version scan <code>nmap -sV -p 8000 127.0.0.1</code> against this service, the service detection will fail and print out the data it got for the GetRequest <strong>probe</strong> (Actually it prints out the data for every <strong>probe</strong> it tries, but we only need the GetRequest results):</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln"> 1</span><span class="cl"><span class="c1"># Truncated response</span>
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl"><span class="m">1</span> service unrecognized despite returning data. If you know the service/version, please submit the following fingerprint at https://nmap.org/cgi-bin/submit.cgi?new-service :
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">SF-Port8000-TCP:V<span class="o">=</span>7.92%I<span class="o">=</span>7%D<span class="o">=</span>7/25%Time<span class="o">=</span>64BFC608%P<span class="o">=</span>x86_64-pc-linux-gnu%r<span class="o">(</span>Ge
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">SF:tRequest,AA,<span class="s2">&#34;HTTP/1\.1\x20200\x20OK\r\ndate:\x20Tue,\x2025\x20Jul\x2020
+</span></span></span><span class="line"><span class="ln"> 5</span><span class="cl"><span class="s2">SF:23\x2012:54:32\x20GMT\r\nserver:\x20\x20dnssearcher\x20v0\.1\.0\r\ncont
+</span></span></span><span class="line"><span class="ln"> 6</span><span class="cl"><span class="s2">SF:ent-length:\x2033\r\ncontent-type:\x20application/json\r\n\r\n{\&#34;messag
+</span></span></span><span class="line"><span class="ln"> 7</span><span class="cl"><span class="s2">SF:e\&#34;:\&#34;Working\x20DNSSearcher\&#34;}&#34;</span><span class="o">)</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl"><span class="c1"># Cleaned up banner</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl"><span class="s2">&#34;HTTP/1\.1\x20200\x20OK\r\ndate:\x20Tue,\x2025\x20Jul\x2020
+</span></span></span><span class="line"><span class="ln">10</span><span class="cl"><span class="s2">SF:23\x2012:54:32\x20GMT\r\nserver:\x20\x20dnssearcher\x20v0\.1\.0\r\ncont
+</span></span></span><span class="line"><span class="ln">11</span><span class="cl"><span class="s2">SF:ent-length:\x2033\r\ncontent-type:\x20application/json\r\n\r\n{\&#34;messag
+</span></span></span><span class="line"><span class="ln">12</span><span class="cl"><span class="s2">SF:e\&#34;:\&#34;Working\x20DNSSearcher\&#34;}&#34;</span>
+</span></span></code></pre></div><p>This output is more useful than the netcat output because it includes the escaped whitespace characters and hex representation of whitespace.
+The regex for this is pretty simple - it starts with an HTTP status code,has the date, then the server. After the server header we can stop processing:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln">1</span><span class="cl"># HTTP status section
+</span></span><span class="line"><span class="ln">2</span><span class="cl">^HTTP/\d\.\d \d{3} \w+\r\n
+</span></span><span class="line"><span class="ln">3</span><span class="cl"># date section
+</span></span><span class="line"><span class="ln">4</span><span class="cl">date: [ \w:,]+\r\n
+</span></span><span class="line"><span class="ln">5</span><span class="cl"># server identifier section
+</span></span><span class="line"><span class="ln">6</span><span class="cl">[sS]erver:\s+dnssearcher v([\d\.]+)
+</span></span><span class="line"><span class="ln">7</span><span class="cl"># all together in a match:
+</span></span><span class="line"><span class="ln">8</span><span class="cl">match http m|^HTTP/\d\.\d \d{3} \w+\r\n[dD]ate: [ \w:,]+\r\n[sS]erver:\s+dnssearcher v([\d\.]+)| p/DNSSearcher/ v/$1/ cpe:/a:connorshade:dnssearcher:$1/a
+</span></span></code></pre></div><p>By dropping the <strong>match</strong> line just underneath the <strong>sslports</strong> section of the TCP GetRequest Probe, we can test out the probe by running nmap again - <code>nmap -sV -p 8000 127.0.0.1</code>:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln"> 1</span><span class="cl">Starting Nmap 7.80 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2023-08-01 19:58 EDT
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">Nmap scan report <span class="k">for</span> localhost <span class="o">(</span>127.0.0.1<span class="o">)</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">Host is up <span class="o">(</span>0.000078s latency<span class="o">)</span>.
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">PORT     STATE SERVICE VERSION
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">8000/tcp open  http    DNSSearcher 0.1.0
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">Read from /home/connor/git/service-to-shell/custom_nmap: nmap-service-probes.
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">Read from /usr/bin/../share/nmap: nmap-payloads nmap-services.
+</span></span><span class="line"><span class="ln">10</span><span class="cl">Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+</span></span><span class="line"><span class="ln">11</span><span class="cl">Nmap <span class="k">done</span>: <span class="m">1</span> IP address <span class="o">(</span><span class="m">1</span> host up<span class="o">)</span> scanned in 11.23 seconds
+</span></span></code></pre></div><p>There it is, a successful nmap scan using a custom <strong>match</strong> object. But in the beginning of this post I promised a custom scan with a custom Probe - we can do that too, and also increase the speed of scanning.</p>
+<h3 id="a-minimal-nmap-service-probes-file">A Minimal nmap-service-probes file</h3>
+<p>What is the smallest nmap probe file we can make that will still successfully scan DNSSearcher?
+We know from <a href="#how-does-it-work">how does it work</a> that some important directives are:</p>
+<ul>
+<li>Exclude</li>
+<li>One or more probes</li>
+<li>One or more matches</li>
+<li>Ports</li>
+<li>rarity</li>
+</ul>
+<p>Lets start from a pretty small nmap-service-probes file:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln">1</span><span class="cl">Exclude T:9100-9107
+</span></span><span class="line"><span class="ln">2</span><span class="cl">Probe TCP NULL q||
+</span></span><span class="line"><span class="ln">3</span><span class="cl">totalwaitms 6000
+</span></span><span class="line"><span class="ln">4</span><span class="cl">tcpwrappedms 3000
+</span></span><span class="line"><span class="ln">5</span><span class="cl">Probe TCP GetRequest q|GET / HTTP/1.0\r\n\r\n|
+</span></span><span class="line"><span class="ln">6</span><span class="cl">rarity 1
+</span></span><span class="line"><span class="ln">7</span><span class="cl">ports 1,70,79,80-85,88,113,139,143,280,497,505,514,515,540,554,591,620,631,783,888,898,900,901,1026,1080,1042,1214,1220,1234,1314,1344,1503,1610,1611,1830,1900,2001,2002,2030,2064,2160,2306,2396,2525,2715,2869,3000,3002,3052,3128,3280,3372,3531,3689,3872,4000,4444,4567,4660,4711,5000,5427,5060,5222,5269,5280,5432,5800-5803,5900,5985,6103,6346,6544,6600,6699,6969,7002,7007,7070,7100,7402,7776,8000-8010,8080-8085,8088,8118,8181,8530,8880-8888,9000,9001,9030,9050,9080,9090,9999,10000,10001,10005,11371,13013,13666,13722,14534,15000,17988,18264,31337,40193,50000,55555
+</span></span><span class="line"><span class="ln">8</span><span class="cl">sslports 443,993,995,1311,1443,3443,4443,5061,5986,7443,8443,8531,9443,10443,14443,44443,60443
+</span></span><span class="line"><span class="ln">9</span><span class="cl">match http m|^HTTP/\d\.\d \d{3} \w+\r\n[dD]ate: [ \w:,]+\r\n[sS]erver:\s+dnssearcher v([\d\.]+)| p/DNSSearcher/ v/$1/ cpe:/a:connorshade:dnssearcher:$1/a
+</span></span></code></pre></div><p>Running this by itself we see a speed improvement from 11.23 seconds to 6.17 seconds, and it only takes up 9 lines. Not bad if you know exactly what you need to scan and just want it done as fast as possible. But if you know exactly what you&rsquo;re scanning, do we need the port information?</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln">1</span><span class="cl">Probe TCP NULL q||
+</span></span><span class="line"><span class="ln">2</span><span class="cl">totalwaitms 6000
+</span></span><span class="line"><span class="ln">3</span><span class="cl">tcpwrappedms 3000
+</span></span><span class="line"><span class="ln">4</span><span class="cl">Probe TCP GetRequest q|GET / HTTP/1.0\r\n\r\n|
+</span></span><span class="line"><span class="ln">5</span><span class="cl">rarity 1
+</span></span><span class="line"><span class="ln">6</span><span class="cl">match http m|^HTTP/\d\.\d \d{3} \w+\r\n[dD]ate: [ \w:,]+\r\n[sS]erver:\s+dnssearcher v([\d\.]+)| p/DNSSearcher/ v/$1/ cpe:/a:connorshade:dnssearcher:$1/a
+</span></span></code></pre></div><p>No, we actually need none of the <strong>port</strong> information. This runs perfectly fine - which makes sense, the NULL <strong>probe</strong> has no <strong>port</strong>s, so any <strong>port</strong> directives must function as a filter if they exist, otherwise a <strong>probe</strong> is run against all ports. Do we need the NULL probe?</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln">1</span><span class="cl">Probe TCP GetRequest q|GET / HTTP/1.0\r\n\r\n|
+</span></span><span class="line"><span class="ln">2</span><span class="cl">match http m|^HTTP/\d\.\d \d{3} \w+\r\n[dD]ate: [ \w:,]+\r\n[sS]erver:\s+dnssearcher v([\d\.]+)| p/DNSSearcher/ v/$1/ cpe:/a:connorshade:dnssearcher:$1/a
+</span></span></code></pre></div><p>The NULL probe is not needed, and this scan runs pretty fast (<strong>0.16 seconds</strong>) - that&rsquo;s the fastest service detection I&rsquo;ve seen in nmap. There you have it - a bare-bones probe that could be the basis for your own detections.</p>
+<p>In most cases you should probably just use nmap&rsquo;s default service-probe file (or one with additions), but if you have to test a bunch of devices in serial, and every second spent on scanning matters, then you can run a stripped probe file for a 100x speed increase.</p>
+<h2 id="wrapping-up">Wrapping up</h2>
+<p>At this point, we have:</p>
+<ul>
+<li>Lightly modified the dnssearcher service to report a banner</li>
+<li>Gone over the layout of an nmap-service-probes file</li>
+<li>Wrote a custom match, and (kind of) a custom probe</li>
+<li>Explored exactly how bare-bones an nmap-service-probes file can be</li>
+<li>Made nmap banner scans 100x faster (if you know exactly what you want to find and how to get it)</li>
+</ul>
+<p>Check out the two sections below for things I didn&rsquo;t cover, or ideas for future tooling, and be sure to check out the next post in the series where we&rsquo;ll make a custom metasploit module to exploit dnssearcher.</p>
+<h3 id="stuff-to-test">Stuff to test</h3>
+<p>There are some things I didn&rsquo;t cover in this post:</p>
+<ul>
+<li><strong>Fallback:</strong> Each probe has an implicit fallback to the NULL probe matches. Any <em>explicit</em> fallback probes are tried before the NULL probe. This might be a fun area to explore with tests.</li>
+<li><strong>Softmatch:</strong> Each softmatch limits successive tests to a matching service. I want to try forking probes off a soft match - maybe have a softmatch of <code>dns_searcher \d_</code> for &ldquo;dns_searcher 0_2_0&rdquo; and <code>dnssearcher v\d\.</code> for &ldquo;dnssearcher v0.1.0&rdquo;. It might be easier to just have separate matches, but I guess a broad <code>server: dnssearcher*</code> soft match might be useful if it frequently changes banner styles.</li>
+<li><strong>Helper Function:</strong> There are three helper functions that can do things like text replacement on regex, or stripping non-printable characters. Look into them, they might be useful.</li>
+</ul>
+<h3 id="possible-tooling">Possible Tooling</h3>
+<p>My first experience actually digging into the <code>nmap-service-probes</code> file was when I was trying to manually parse lists of existing banners. I don&rsquo;t believe that nmap has a way to feed banners in, so I wrote some Python to extract the regular expressions and associated version data from nmap and run banners through these regular expressions.</p>
+<p>The original code I wrote was pretty rough. Now that I have a little more experience with nmap, and a stronger desire to find the correct place to put probes and matches, I might write some nmap tooling later. I&rsquo;m thinking something like <a href="https://github.com/cnnrshd/sysmon_utils/tree/master">sysmon_utils</a> but for nmap - a CLI tool that allows for:</p>
+<ul>
+<li>Testing banners against probes</li>
+<li>Alerting on early hits (or multiple hits, where one overrides something that is more specific)</li>
+<li>Possibly give a printout of how different probes and matches interact (no idea how to do that one, since the cross-references nmap matches allows break the DAC).</li>
+</ul>
+<p>Keep an eye on my <a href="https://github.com/cnnrshd">GitHub</a> if that sounds useful or interesting.</p>
+
+<div style="display: flex; justify-content: space-between;">
+  <span style="text-align: left;">Prev: <a href="https://connorshade.com/service-to-shell/vulnerable-webapp/">Making a Vulnerable Webapp</a></span>
+  
+</div>
+
+  </main>
+  <footer><small>
+  Connor Shade | Made with <a href="https://gohugo.io/">Hugo</a>, themed by <a href="https://themes.gohugo.io/themes/hugo-bearcub/">Bear Cub</a>
+</small></footer>
+
+    
+</body>
+
+</html>

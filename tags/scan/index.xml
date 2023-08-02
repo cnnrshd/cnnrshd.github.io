@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Service to Shell on Connor Shade</title>
-    <link>https://connorshade.com/service-to-shell/</link>
-    <description>Recent content in Service to Shell on Connor Shade</description>
+    <title>scan on Connor Shade</title>
+    <link>https://connorshade.com/tags/scan/</link>
+    <description>Recent content in scan on Connor Shade</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Connor Shade</copyright>
-    <lastBuildDate>Fri, 28 Jul 2023 16:46:09 -0400</lastBuildDate><atom:link href="https://connorshade.com/service-to-shell/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 28 Jul 2023 16:26:20 -0400</lastBuildDate><atom:link href="https://connorshade.com/tags/scan/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Writing Nmap Scan</title>
       <link>https://connorshade.com/service-to-shell/writing-nmap-scan/</link>
@@ -16,16 +16,6 @@
       <guid>https://connorshade.com/service-to-shell/writing-nmap-scan/</guid>
       <description>Welcome back to the second part of &amp;ldquo;service-to-shell&amp;rdquo;. In this post I&amp;rsquo;ll outline the process of making a custom nmap match directive that can be used to detect services that may not have an existing nmap directive. This can be especially useful when dealing with custom applications. Here&amp;rsquo;s an overview of what I&amp;rsquo;ll cover:
 Modifying the dnssearcher service to report a banner The basic layout of an nmap service probe file Writing a custom nmap service probe to detect dnssearcher and extract the version Strip the probe to run banner scans 100x faster than default Reporting a banner By default, uvicorn will use the Server header of &amp;ldquo;uvicorn&amp;rdquo; in the response.</description>
-    </item>
-    
-    <item>
-      <title>Making a Vulnerable Webapp</title>
-      <link>https://connorshade.com/service-to-shell/vulnerable-webapp/</link>
-      <pubDate>Thu, 27 Jul 2023 21:43:58 -0400</pubDate>
-      
-      <guid>https://connorshade.com/service-to-shell/vulnerable-webapp/</guid>
-      <description>Welcome to Part One in my &amp;ldquo;service-to-shell&amp;rdquo; series. I want to make a vulnerable webapp that I can scan with a custom nmap probe and exploit with a custom Metasploit module.
-This post covers making the vulnerable webapp - not as exciting as a custom Metasploit module or as useful as an additional nmap banner scanner, but an essential part of the project. For making a vulnerable webapp, the first step is to pick the language (I went with Python), then the vulnerability (Command injection - it&amp;rsquo;s simple to write and understand), and finally the theme.</description>
     </item>
     
   </channel>

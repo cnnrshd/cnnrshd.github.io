@@ -18,5 +18,15 @@
 Expect</description>
     </item>
     
+    <item>
+      <title>Writing Nmap Scan</title>
+      <link>https://connorshade.com/service-to-shell/writing-nmap-scan/</link>
+      <pubDate>Fri, 28 Jul 2023 16:26:20 -0400</pubDate>
+      
+      <guid>https://connorshade.com/service-to-shell/writing-nmap-scan/</guid>
+      <description>Welcome back to the second part of &amp;ldquo;service-to-shell&amp;rdquo;. In this post I&amp;rsquo;ll outline the process of making a custom nmap match directive that can be used to detect services that may not have an existing nmap directive. This can be especially useful when dealing with custom applications. Here&amp;rsquo;s an overview of what I&amp;rsquo;ll cover:
+Modifying the dnssearcher service to report a banner The basic layout of an nmap service probe file Writing a custom nmap service probe to detect dnssearcher and extract the version Strip the probe to run banner scans 100x faster than default Reporting a banner By default, uvicorn will use the Server header of &amp;ldquo;uvicorn&amp;rdquo; in the response.</description>
+    </item>
+    
   </channel>
 </rss>
