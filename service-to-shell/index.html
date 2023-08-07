@@ -67,9 +67,27 @@
   <main>
 <h1>Service to Shell</h1>
 This post series outlines making a new vulnerable service, writing an nmap match to detect it and extract CPEs, and writing a Metasploit module to exploit it.
-<p>Check out the code at <a href="https://github.com/cnnrshd/service-to-shell">github.com/cnnrshd/service-to-shell</a>.</p>
-<p>Expect some additions later, this is a work in progress.
-New tooling might also come out of this project.</p>
+<p>Check out the code at <a href="https://github.com/cnnrshd/service-to-shell">github.com/cnnrshd/service-to-shell</a>!</p>
+<h2 id="summary">Summary</h2>
+<p>This was a fun project.
+I enjoyed most of the process, the worst part was trying to troubleshoot some of the Metasploit issues I was having (especially using <code>echo</code> as a a cmdstager).</p>
+<p>I made:</p>
+<ul>
+<li><a href="https://github.com/cnnrshd/service-to-shell/blob/master/dnssearcher/main.py">DNSSearcher</a>, a vulnerable FastAPI service, then used FastAPI&rsquo;s data validation to prevent command injection on an endpoint.</li>
+<li><a href="https://github.com/cnnrshd/service-to-shell/blob/master/custom_nmap_minimal/nmap-service-probes">An extremely minimal nmap-service-probe file</a> that runs 100x faster and only detects DNSSearcher</li>
+<li><a href="https://github.com/cnnrshd/service-to-shell/blob/master/msf4/modules/exploits/custom/dnssearcher.rb">A Metasploit module</a> that auto-checks the exploit and works with multiple payloads and stagers</li>
+</ul>
+<h2 id="artifacts">Artifacts</h2>
+<p>So far, there are no greater contributions to the Cyber Security community as a result of this project.
+I do have some tooling that I talked about at the end of <a href="https://connorshade.com/service-to-shell/custom-metasploit/#conclusion">Making a Custom Metasploit Module</a> that might be fun:</p>
+<ul>
+<li>Some utilities (in the style of <a href="https://github.com/cnnrshd/sysmon_utils/tree/master">sysmon_utils</a>) for working with nmap probe files, testing banners, etc.</li>
+<li>A toy scanner, probably in Go, that is compatible with nmap service probes. This might be a good way to learn the language.</li>
+</ul>
+<h2 id="reflection">Reflection</h2>
+<p>This was a great project for understanding how Nmap and Metasploit work beyond the kind of experience you&rsquo;d get just by using these tools.
+Making the small web service (DNSSearcher) was fun, and I think I&rsquo;ll use the FastAPI library more.</p>
+<p>I would highly recommend anyone who uses tools to try to play with them - write your own logic, try to write a module, it really helps.</p>
 
     <ul>
     

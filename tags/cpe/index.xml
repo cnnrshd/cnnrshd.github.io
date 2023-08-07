@@ -14,8 +14,10 @@
       <pubDate>Fri, 28 Jul 2023 16:46:09 -0400</pubDate>
       
       <guid>https://connorshade.com/service-to-shell/</guid>
-      <description>Check out the code at github.com/cnnrshd/service-to-shell.
-Expect some additions later, this is a work in progress. New tooling might also come out of this project.</description>
+      <description>Check out the code at github.com/cnnrshd/service-to-shell!
+Summary This was a fun project. I enjoyed most of the process, the worst part was trying to troubleshoot some of the Metasploit issues I was having (especially using echo as a a cmdstager).
+I made:
+DNSSearcher, a vulnerable FastAPI service, then used FastAPI&amp;rsquo;s data validation to prevent command injection on an endpoint. An extremely minimal nmap-service-probe file that runs 100x faster and only detects DNSSearcher A Metasploit module that auto-checks the exploit and works with multiple payloads and stagers Artifacts So far, there are no greater contributions to the Cyber Security community as a result of this project.</description>
     </item>
     
     <item>
