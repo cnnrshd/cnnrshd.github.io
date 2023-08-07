@@ -29,7 +29,7 @@ cnnrshd/connorshade.com - This repo holds the output of my hugo new site connors
     </item>
     
     <item>
-      <title>Writing Nmap Scan</title>
+      <title>Writing a Custom Nmap Scan</title>
       <link>https://connorshade.com/service-to-shell/writing-nmap-scan/</link>
       <pubDate>Fri, 28 Jul 2023 16:26:20 -0400</pubDate>
       
