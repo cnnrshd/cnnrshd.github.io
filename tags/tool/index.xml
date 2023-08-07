@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>metasploit on Connor Shade</title>
-    <link>https://connorshade.com/tags/metasploit/</link>
-    <description>Recent content in metasploit on Connor Shade</description>
+    <title>tool on Connor Shade</title>
+    <link>https://connorshade.com/tags/tool/</link>
+    <description>Recent content in tool on Connor Shade</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Connor Shade</copyright>
-    <lastBuildDate>Thu, 03 Aug 2023 19:29:20 -0400</lastBuildDate><atom:link href="https://connorshade.com/tags/metasploit/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 03 Aug 2023 19:29:20 -0400</lastBuildDate><atom:link href="https://connorshade.com/tags/tool/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Making a Custom Metasploit Module</title>
       <link>https://connorshade.com/service-to-shell/custom-metasploit/</link>
@@ -16,16 +16,6 @@
       <guid>https://connorshade.com/service-to-shell/custom-metasploit/</guid>
       <description>Welcome to part three of service-to-shell. In this post we&amp;rsquo;ll cover the basics of exploiting DNSSearcher by using Metasploit, along with command stagers, to get a full Meterpreter session on the target. I&amp;rsquo;ll do my best to cover best practices - if you have a similarly vulnerable webapp, I hope this is a useful tutorial, or something interesting to read.
 Research How to get a Metasploit environment If you&amp;rsquo;re running on a machine where you want to install Metasploit (or where it&amp;rsquo;s already installed), this shouldn&amp;rsquo;t be a problem.</description>
-    </item>
-    
-    <item>
-      <title>Service to Shell</title>
-      <link>https://connorshade.com/service-to-shell/</link>
-      <pubDate>Fri, 28 Jul 2023 16:46:09 -0400</pubDate>
-      
-      <guid>https://connorshade.com/service-to-shell/</guid>
-      <description>Check out the code at github.com/cnnrshd/service-to-shell.
-Expect some additions later, this is a work in progress. New tooling might also come out of this project.</description>
     </item>
     
   </channel>

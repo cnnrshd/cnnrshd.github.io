@@ -7,7 +7,52 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Connor Shade</copyright>
-    <lastBuildDate>Sat, 29 Jul 2023 17:20:50 -0400</lastBuildDate><atom:link href="https://connorshade.com/tags/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 03 Aug 2023 19:29:20 -0400</lastBuildDate><atom:link href="https://connorshade.com/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>exploit</title>
+      <link>https://connorshade.com/tags/exploit/</link>
+      <pubDate>Thu, 03 Aug 2023 19:29:20 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/exploit/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>metasploit</title>
+      <link>https://connorshade.com/tags/metasploit/</link>
+      <pubDate>Thu, 03 Aug 2023 19:29:20 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/metasploit/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>meterpreter</title>
+      <link>https://connorshade.com/tags/meterpreter/</link>
+      <pubDate>Thu, 03 Aug 2023 19:29:20 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/meterpreter/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>ruby</title>
+      <link>https://connorshade.com/tags/ruby/</link>
+      <pubDate>Thu, 03 Aug 2023 19:29:20 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/ruby/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>tool</title>
+      <link>https://connorshade.com/tags/tool/</link>
+      <pubDate>Thu, 03 Aug 2023 19:29:20 -0400</pubDate>
+      
+      <guid>https://connorshade.com/tags/tool/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>hugo</title>
       <link>https://connorshade.com/tags/hugo/</link>
@@ -32,15 +77,6 @@
       <pubDate>Fri, 28 Jul 2023 16:46:09 -0400</pubDate>
       
       <guid>https://connorshade.com/tags/cpe/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>metasploit</title>
-      <link>https://connorshade.com/tags/metasploit/</link>
-      <pubDate>Fri, 28 Jul 2023 16:46:09 -0400</pubDate>
-      
-      <guid>https://connorshade.com/tags/metasploit/</guid>
       <description></description>
     </item>
     
@@ -77,15 +113,6 @@
       <pubDate>Thu, 27 Jul 2023 21:43:58 -0400</pubDate>
       
       <guid>https://connorshade.com/tags/command-injection/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>exploit</title>
-      <link>https://connorshade.com/tags/exploit/</link>
-      <pubDate>Thu, 27 Jul 2023 21:43:58 -0400</pubDate>
-      
-      <guid>https://connorshade.com/tags/exploit/</guid>
       <description></description>
     </item>
     
